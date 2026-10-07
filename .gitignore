@@ -1,0 +1,52 @@
+# --- Secretos ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+wazuh-passwords.txt
+wazuh-install-files.tar
+*credentials*
+*secrets*
+config.yml
+
+# --- WireGuard / Tailscale ---
+privatekey
+publickey
+*.conf
+!*.conf.example
+
+# --- Logs y datos ---
+*.log
+logs/
+data/
+alerts/
+wazuh-alerts-*
+*.ndjson.tmp
+
+# --- Backups ---
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+backups/
+
+# --- Editor / OS ---
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# --- Python ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# --- Ansible ---
+*.retry
+ansible/vault-pass*
