@@ -217,6 +217,18 @@ Nunca ataques sistemas de terceros sin autorización por escrito.
 
 ---
 
+## 11. Incidencias documentadas
+
+Durante la construcción del laboratorio han aparecido problemas reales que
+están documentados en [`docs/04-incidents.md`](docs/04-incidents.md):
+
+- **Incidente 1:** El paquete `wazuh-agent` destruye `wazuh-manager` al
+  instalarse en el mismo host. Lección: agente y manager siempre en
+  máquinas separadas.
+- **Incidente 2:** Tras recuperar el manager, el dashboard quedó roto con
+  errores `403` y `version_conflict`. Lección: revisar `wazuh.yml` y
+  resetear `.kibana_*` cuando cambian las credenciales.
+
 ## Licencia
 
 MIT — ver [LICENSE](LICENSE).
