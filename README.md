@@ -213,8 +213,10 @@ Nunca ataques sistemas de terceros sin autorización por escrito.
 
 - [Instalación detallada](docs/01-installation.md)
 - [Arquitectura](docs/02-architecture.md)
+- [Validación del agente](docs/03-agent-validation.md)
+- [Incidentes documentados](docs/04-incidents.md)
+- [Troubleshooting](docs/05-troubleshooting.md)
 - [Decisiones de diseño (ADR)](docs/adr/)
-
 ---
 
 ## 11. Incidencias documentadas
