@@ -1,11 +1,26 @@
 # Wazuh + TPOT SOC Lab
 
+![Fase 1](https://img.shields.io/badge/Fase%201-Completada-brightgreen)
+![Wazuh](https://img.shields.io/badge/Wazuh-4.14.8-blue)
+![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%20LTS-orange)
+![Licencia](https://img.shields.io/badge/Licencia-MIT-lightgrey)
+![Estado](https://img.shields.io/badge/Estado-Activo-success)
+
 Laboratorio SOC personal para practicar operativa Blue Team: despliegue de un
 SIEM (Wazuh) en local y un honeypot multi-servicio (TPOT) en una VPS pública,
 conectados por túnel WireGuard. Los ataques reales contra el honeypot se
 detectan, enriquecen y visualizan en tiempo real.
 
 > **Estado:** Fase 1 completada — Wazuh todo-en-uno desplegado y operativo.
+
+## Fases del proyecto
+
+| Fase | Descripción | Estado |
+|---|---|---|
+| **1. Wazuh base** | SIEM desplegado en local + agente validado | ✅ Completada |
+| **2. Honeypot** | TPOT en VPS pública + túnel WireGuard | 🚧 En progreso |
+| **3. Detección** | Reglas custom + mapeo MITRE ATT&CK | ⏳ Pendiente |
+| **4. Visualización** | Dashboards + Active Response | ⏳ Pendiente |
 
 ---
 
