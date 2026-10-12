@@ -163,6 +163,141 @@ Tras cualquier operación que **regenera credenciales del manager**
 
 ---
 
+## Incidente 3: Manager no arranca por timeout de systemd
+
+**Fecha:** 2026-10-12
+
+### Síntoma
+
+Tras la recuperación del Incidente 1, `systemctl status wazuh-manager` mostraba:
+
+```
+Active: failed (Result: timeout)
+Failed to start Wazuh manager.
+```
+
+Los demonios arrancaban (`authd`, `db`, `execd`, `analysisd`) pero systemd
+mataba el servicio antes de completar el arranque.
+
+### Causa
+
+`wazuh-analysisd` tarda ~35-40 segundos en cargar las 8451 reglas por
+defecto. El `TimeoutStartSec` por defecto de systemd es insuficiente en
+entornos virtualizados.
+
+### Solución aplicada
+
+```bash
+sudo mkdir -p /etc/systemd/system/wazuh-manager.service.d
+
+sudo tee /etc/systemd/system/wazuh-manager.service.d/override.conf > /dev/null <<'EOF'
+[Service]
+TimeoutStartSec=300
+TimeoutStopSec=120
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl restart wazuh-manager
+```
+
+### Lección
+
+Ampliar `TimeoutStartSec` en hosts virtualizados con recursos limitados.
+Verificar siempre con `systemctl show wazuh-manager | grep -i timeout`.
+
+---
+
+## Incidente 4: Locks huérfanos tras timeout
+
+**Fecha:** 2026-10-12
+
+### Síntoma
+
+Tras varios arranques fallidos del manager, intentar arrancarlo de nuevo:
+
+```
+ERROR: Another instance is locking...ess.
+If you are sure that no other ins[tance]...lock
+```
+
+### Causa
+
+Cuando systemd mata el servicio por timeout, los demonios internos quedan
+huérfanos y dejan ficheros `.pid` en `/var/ossec/var/run/`. En el siguiente
+intento, los nuevos procesos ven esos `.pid` y creen que ya hay otro manager
+corriendo.
+
+### Solución aplicada
+
+```bash
+# Confirmar que no hay procesos Wazuh vivos
+ps -ef | grep -iE "wazuh|ossec" | grep -v grep
+
+# Borrar todos los locks
+sudo find /var/ossec/var/run/ -name "*.pid" -delete
+
+# Arrancar limpio
+sudo systemctl start wazuh-manager
+```
+
+### Lección
+
+Consecuencia directa del Incidente 3. Si el manager falla al arrancar con
+"Another instance is locking", limpiar `/var/ossec/var/run/*.pid` tras
+confirmar que no hay procesos vivos.
+
+---
+
+## Incidente 5: Indexer no arranca por timeout de systemd
+
+**Fecha:** 2026-10-12
+
+### Síntoma
+
+El Indexer quedaba en estado `failed (Result: timeout)` tras reinicios.
+El dashboard mostraba:
+
+```
+[ConnectionError]: connect ECONNREFUSED 127.0.0.1:9200
+Wazuh dashboard server is not ready yet
+```
+
+El puerto 9200 no estaba escuchando aunque el servicio dijera `active`.
+
+### Causa
+
+OpenSearch tarda >90s en arrancar en VMs con recursos limitados,
+especialmente cuando tiene que recuperar índices tras una caída brusca.
+Mismo problema que el Incidente 3 pero con otro componente.
+
+### Solución aplicada
+
+```bash
+sudo mkdir -p /etc/systemd/system/wazuh-indexer.service.d
+
+sudo tee /etc/systemd/system/wazuh-indexer.service.d/override.conf > /dev/null <<'EOF'
+[Service]
+TimeoutStartSec=600
+TimeoutStopSec=180
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl restart wazuh-indexer
+```
+
+### Lección
+
+**Aplicar el mismo override a TODOS los servicios Wazuh que tarden en
+arrancar.** Manager e Indexer necesitan más de 90s en este laboratorio.
+Dejarlos por defecto es una fuente constante de falsos `failed`.
+
+Verificación:
+
+```bash
+sudo systemctl show wazuh-indexer | grep -i timeout
+# TimeoutStartUSec=10min
+```
+
 ## Plantilla para próximos incidentes
 
 ```markdown

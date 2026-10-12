@@ -187,7 +187,7 @@ Nunca ataques sistemas de terceros sin autorización por escrito.
 ### Fase 1 — Wazuh base
 - [x] Desplegar Wazuh todo-en-uno en Ubuntu 22.04
 - [x] Verificar cluster `green` y acceso al dashboard
-- [ ] Conectar agente Wazuh local para validar pipeline
+- [x] Conectar agente Wazuh local para validar pipeline
 
 ### Fase 2 — Honeypot en VPS
 - [ ] Contratar VPS y desplegar TPOT
@@ -228,6 +228,9 @@ están documentados en [`docs/04-incidents.md`](docs/04-incidents.md):
 - **Incidente 2:** Tras recuperar el manager, el dashboard quedó roto con
   errores `403` y `version_conflict`. Lección: revisar `wazuh.yml` y
   resetear `.kibana_*` cuando cambian las credenciales.
+- **Incidente 3:** Manager no arranca por timeout de systemd
+- **Incidente 4:** Locks huérfanos en `/var/ossec/var/run/` tras timeout
+- **Incidente 5:** Indexer no arranca por timeout de systemd (mismo patrón)
 
 ## Licencia
 
