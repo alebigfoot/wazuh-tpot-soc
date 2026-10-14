@@ -86,25 +86,6 @@ en Internet.
 
 El túnel Tailscale permite al agente Wazuh de la VPS enviar elementos al manager local sin exponer los puertos del SIEM a Internet.
 
-### Estado objetivo (Fase final)
-
-```
-┌──────────────────────────┐         ┌──────────────────────────┐
-│  VPS pública             │         │  Ubuntu 22.04 (local)    │
-│                          │         │                          │
-│  ┌────────────────────┐  │         │  ┌────────────────────┐  │
-│  │  TPOT              │  │   TS    │  │  Wazuh Manager     │  │
-│  │  - Cowrie          │◄─┼─────────┼─►│  Wazuh Indexer     │  │
-│  │  - Dionaea         │  │         │  │  Wazuh Dashboard   │  │
-│  │  - Suricata        │  │         │  │  + Agente Wazuh    │  │
-│  └────────────────────┘  │         │  └────────────────────┘  │
-│ 100.112.220.3(Tailscale) │         │ 100.108.83.63(Tailscale) │
-└──────────────────────────┘         └──────────────────────────┘
-         ▲
-         │  Ataques reales de Internet
-         │  (bots, escáneres, atacantes)
-```
-
 - **Fase 3:** Reglas de detección custom + mapeo MITRE ATT&CK
 - **Fase 4:** Dashboards personalizados + Active Response + enriquecimiento 
 ---
