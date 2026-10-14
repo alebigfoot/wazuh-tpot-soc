@@ -59,6 +59,7 @@ Los puertos `9200` y `9300` del Indexer **no se exponen**. Solo escuchan en
 ```bash
 cd ~
 curl -sO https://packages.wazuh.com/4.14/wazuh-install.sh
+curl -sO https://packages.wazuh.com/4.14/config.yml
 chmod +x wazuh-install.sh
 sudo bash wazuh-install.sh -a
 ```
@@ -131,10 +132,24 @@ Aceptar el certificado autofirmado y usar las credenciales del usuario `admin`.
 
 ## Incidencias encontradas
 
-| Problema | Causa | Solución aplicada |
-|---|---|---|
-| El instalador falla al arrancar el Indexer | `vm.max_map_count` por defecto (65530) | Aplicar `sysctl -w vm.max_map_count=262144` |
-| `config.yml` contiene placeholders sin sustituir | Descarga por defecto sin editar | Reemplazarlos por `127.0.0.1` con `sed` |
+Durante la instalación aparecieron varios problemas, todos documentados
+con detalle en [`04-incidents.md`](04-incidents.md):
+
+| Problema | Referencia |
+|---|---|
+| `vm.max_map_count` por defecto demasiado bajo | — |
+| Placeholders sin sustituir en `config.yml` | — |
+| Manager no arranca por timeout de systemd | [Incidente 3](04-incidents.md#incidente-3-manager-no-arranca-por-timeout-de-systemd) |
+| Locks huérfanos tras timeout | [Incidente 4](04-incidents.md#incidente-4-locks-huérfanos-tras-timeout) |
+| Indexer no arranca por timeout de systemd | [Incidente 5](04-incidents.md#incidente-5-indexer-no-arranca-por-timeout-de-systemd) |
+
+## Relación con otras fases
+
+- **Fase 2 — Honeypot en VPS:** el manager Wazuh recibe eventos de un
+  honeypot T-Pot desplegado en una VPS pública.
+  - [Configuración de la VPS](06-vps-setup.md)
+  - [Instalación de T-Pot](07-tpot-installation.md)
+  - [ADR 0002 — Tailscale](adr/0002-tailscale-sobre-wireguard.md)
 
 ## Referencias
 
