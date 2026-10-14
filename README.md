@@ -11,7 +11,7 @@ SIEM (Wazuh) en local y un honeypot multi-servicio (TPOT) en una VPS pública,
 conectados por túnel Tailscale. Los ataques reales contra el honeypot se
 detectan, enriquecen y visualizan en tiempo real.
 
-> **Estado:** Fase 1 completada — Wazuh todo-en-uno desplegado y operativo.
+> **Estado:** Fase 1 completada . Fase 2 en progreso - Wazuh operativo y T-Pot desplegado en la VPS
 
 ## Fases del proyecto
 
@@ -42,8 +42,8 @@ en Internet.
 **Qué hace este proyecto:**
 
 - Despliega Wazuh todo-en-uno (Manager + Indexer + Dashboard) sobre Ubuntu 22.04 LTS.
-- Expone un honeypot TPOT en una VPS pública para recibir ataques reales de Internet.
-- Conecta ambos entornos mediante túnel Tailscale, sin exponer el SIEM.
+- Expone un honeypot T-Pot (multi-servicio) en una VPS pública para recibir ataques reales de Internet.
+- Conecta ambos entornos mediante túnel Tailscale P2P, sin exponer el SIEM.
 - Aplica reglas de detección mapeadas a MITRE ATT&CK.
 - Visualiza la actividad maliciosa en dashboards específicos.
 
@@ -57,22 +57,34 @@ en Internet.
 
 ## 3. Arquitectura
 
-### Estado actual (Fase 1)
+### Estado actual (Fase 2 en progreso)
 
 ```
-┌──────────────────────────────────────────────┐
-│  Ubuntu 22.04 LTS (VirtualBox, NAT)          │
-│  IP: 10.0.2.15                               │
-│                                              │
-│  ┌────────────────────────────────────────┐  │
-│  │  Wazuh Manager      (1514, 1515, 55000)│  │
-│  │  Wazuh Indexer      (9200, solo local) │  │
-│  │  Wazuh Dashboard    (443)              │  │
-│  └────────────────────────────────────────┘  │
-│                                              │
-│  8 vCPU · 8 GB RAM · 50 GB disco             │
-└──────────────────────────────────────────────┘
+┌───────────────────────────────────────┐         ┌───────────────────────────────────────┐
+│  VPS pública (Contabo)                │         │  Lab local (VirtualBox)               │
+│  Ubuntu 26.04 LTS · 4 vCPU · 8 GB RAM │         │  Ubuntu 22.04 LTS · 8 vCPU · 8 GB RAM │
+│                                       │         │                                       │
+│  ┌─────────────────────────────────┐  │         │  ┌─────────────────────────────────┐  │
+│  │  T-Pot (23 contenedores)        │  │         │  │  Wazuh Manager                  │  │
+│  │                                 │  │         │  │  Wazuh Indexer                  │  │
+│  │  - Cowrie (SSH/Telnet)          │  │         │  │  Wazuh Dashboard                │  │
+│  │  - Dionaea (SMB/FTP/MSSQL)      │  │Tailscale│  │                                 │  │
+│  │  - Suricata (IDS)               │◄─┼───P2P───┼─►│  Puertos expuestos:             │  │
+│  │  - Conpot (SCADA/ICS)           │  │cifrado  │  │   · 1514  (agentes)             │  │
+│  │  - Dicompot, Medpot, ...        │  │         │  │   · 1515  (registro)            │  │
+│  │                                 │  │         │  │   · 55000 (API)                 │  │
+│  │  IP Tailscale: 100.112.220.3    │  │         │  │   · 443   (dashboard)           │  │
+│  └─────────────────────────────────┘  │         │  └─────────────────────────────────┘  │
+│                                       │         │                                       │
+│  SSH admin: puerto 64295              │         │  IP Tailscale: 100.108.83.63          │
+└───────────────────────────────────────┘         └───────────────────────────────────────┘
+                     ▲
+                     │  Ataques reales de Internet
+                     │  (bots, escáneres, atacantes)
+
 ```
+
+El túnel Tailscale permite al agente Wazuh de la VPS enviar elementos al manager local sin exponer los puertos del SIEM a Internet.
 
 ### Estado objetivo (Fase final)
 
@@ -93,6 +105,8 @@ en Internet.
          │  (bots, escáneres, atacantes)
 ```
 
+**Fase 3:** Reglas de detección custom + mapeo MITRE ATT&CK
+**Fase 4:** Dashboards personalizados + Active Response + enriquecimiento 
 ---
 
 ## 4. Instalación
@@ -189,10 +203,25 @@ curl -sk -u admin:TU_PASSWORD https://localhost:9200/_cluster/health?pretty
 
 ## 6. Capturas
 
+## 6. Capturas
+
+### Wazuh Dashboard — Overview con agente activo
+
 ![Dashboard overview](docs/diagrams/dashboard-overview.png)
 
-*Panel principal del Wazuh Dashboard tras la instalación inicial, mostrando
-métricas de las últimas 24 horas.*
+*Panel principal del Wazuh Dashboard mostrando 1 agente activo.*
+
+### Agents — Agente conectado
+
+![Agents active](docs/diagrams/agents-active.png)
+
+*El agente `agent-test` en estado Active en la vista de Agents.*
+
+### Security Events — Eventos del agente
+
+![Security events](docs/diagrams/security-events.png)
+
+*Discover filtrado por `agent.name: agent-test` mostrando 216 eventos capturados.*
 
 ---
 
@@ -279,7 +308,7 @@ Nunca ataques sistemas de terceros sin autorización por escrito.
 
 ## 11. Incidencias documentadas
 
-Durante la construcción del laboratorio han aparecido algunos problemas reales
+Durante la construcción del laboratorio han aparecido problemas reales
 documentados en [`docs/04-incidents.md`](docs/04-incidents.md):
 
 ### Fase 1 — Wazuh base
@@ -295,6 +324,9 @@ documentados en [`docs/04-incidents.md`](docs/04-incidents.md):
 6. DNS roto tras cambiar adaptador de red en VirtualBox
 7. Tailscale: autenticación por URL no sincroniza
 8. Sesión de Tailscale caduca entre sesiones SSH
+9. T-Pot rechaza Ubuntu 24.04 — requiere 26.04
+10. T-Pot no se puede instalar desde root
+11. Manager sin clave SSH — no se puede autenticar por clave
 
 ## Licencia
 
