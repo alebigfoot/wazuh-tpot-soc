@@ -7,274 +7,241 @@
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-lightgrey)
 ![Estado](https://img.shields.io/badge/Estado-Activo-success)
 
-Laboratorio SOC personal para practicar operativa Blue Team: despliegue de un
-SIEM (Wazuh) en local y un honeypot multi-servicio (T-Pot) en una VPS pública,
-conectados por túnel Tailscale. Los ataques reales contra el honeypot se
-detectan, enriquecen y visualizan en tiempo real.
+Laboratorio personal de **Blue Team** orientado a practicar la monitorización de eventos, el análisis de actividad sospechosa y el desarrollo de capacidades de detección.
 
-> **Estado:** Fase 1 completada . Fase 2 en progreso - Wazuh operativo y T-Pot desplegado en la VPS
+El proyecto combina **Wazuh SIEM/XDR**, desplegado en una máquina virtual local, con **T-Pot**, un honeypot multiservicio alojado en una VPS pública. Ambos entornos cuentan con conectividad mediante una red privada Tailscale. El laboratorio se desarrolla por fases: despliegue de infraestructura, integración de telemetría, creación de reglas de detección, mapeo a **MITRE ATT&CK** y visualización de resultados.
+
+> **Estado actual:** Wazuh está desplegado y validado en local; T-Pot está instalado en la VPS y la conectividad mediante Tailscale está configurada. La integración de los logs de T-Pot con Wazuh y la validación de eventos reales en el dashboard siguen pendientes.
 
 ## Fases del proyecto
 
 | Fase | Descripción | Estado |
 |---|---|---|
-| **1. Wazuh base** | SIEM desplegado en local + agente validado | ✅ Completada |
-| **2. Honeypot** | T-Pot en VPS pública + túnel Tailscale | 🚧 En progreso |
-| **3. Detección** | Reglas custom + mapeo MITRE ATT&CK | ⏳ Pendiente |
-| **4. Visualización** | Dashboards + Active Response | ⏳ Pendiente |
+| **1. Wazuh base** | SIEM desplegado en local y agente de prueba validado | ✅ Completada |
+| **2. Honeypot** | T-Pot en VPS pública y conectividad mediante Tailscale | 🚧 En progreso |
+| **3. Detección** | Reglas personalizadas y mapeo MITRE ATT&CK | ⏳ Pendiente |
+| **4. Visualización y respuesta** | Dashboards, enriquecimiento y Active Response | ⏳ Pendiente |
 
 ---
 
-## 1. Problema
+## 1. Objetivo y alcance
 
-Los perfiles junior en ciberseguridad suelen tener dificultades para demostrar
-experiencia práctica real. Los cursos y certificaciones no siempre evidencian
-capacidad operativa: montar, monitorizar y analizar eventos en un SIEM real.
+### Objetivos
 
-Este proyecto documenta la construcción de un SOC funcional end-to-end con
-evidencia reproducible: instalación, configuración, reglas de detección,
-dashboards y análisis de ataques reales capturados por un honeypot expuesto
-en Internet.
+- Desplegar Wazuh todo-en-uno (Manager, Indexer y Dashboard) en Ubuntu 22.04 LTS.
+- Ejecutar T-Pot en una VPS pública para observar actividad dirigida a servicios señuelo.
+- Mantener la comunicación entre los entornos mediante Tailscale, evitando exponer directamente el dashboard a Internet.
+- Integrar los logs relevantes de T-Pot en Wazuh.
+- Crear reglas de detección, documentar su relación con MITRE ATT&CK y desarrollar dashboards para analizar los eventos.
 
----
+### Alcance y limitaciones
 
-## 2. Objetivo
-
-**Qué hace este proyecto:**
-
-- Despliega Wazuh todo-en-uno (Manager + Indexer + Dashboard) sobre Ubuntu 22.04 LTS.
-- Expone un honeypot T-Pot (multi-servicio) en una VPS pública para recibir ataques reales de Internet.
-- Conecta ambos entornos mediante túnel Tailscale P2P, sin exponer el SIEM.
-- Aplica reglas de detección mapeadas a MITRE ATT&CK.
-- Visualiza la actividad maliciosa en dashboards específicos.
-
-**Qué NO hace:**
-
-- No es un SOC de producción.
-- No sustituye a un SIEM empresarial.
-- No pretende detectar amenazas avanzadas (APTs).
+- Es un laboratorio personal, no un SOC de producción.
+- No sustituye a un SIEM empresarial ni pretende detectar por sí solo todas las amenazas avanzadas.
+- Las capacidades se incorporan y validan progresivamente. Las fases pendientes no deben interpretarse como funcionalidades ya operativas.
 
 ---
 
-## 3. Arquitectura
+## 2. Arquitectura
 
-### Estado actual (Fase 2 en progreso)
+### Estado actual
 
-```
-┌───────────────────────────────────────┐         ┌───────────────────────────────────────┐
-│  VPS pública (Contabo)                │         │  Lab local (VirtualBox)               │
-│  Ubuntu 26.04 LTS · 4 vCPU · 8 GB RAM │         │  Ubuntu 22.04 LTS · 8 vCPU · 8 GB RAM │
-│                                       │         │                                       │
-│  ┌─────────────────────────────────┐  │         │  ┌─────────────────────────────────┐  │
-│  │  T-Pot (23 contenedores)        │  │         │  │  Wazuh Manager                  │  │
-│  │                                 │  │         │  │  Wazuh Indexer                  │  │
-│  │  - Cowrie (SSH/Telnet)          │  │         │  │  Wazuh Dashboard                │  │
-│  │  - Dionaea (SMB/FTP/MSSQL)      │  │Tailscale│  │                                 │  │
-│  │  - Suricata (IDS)               │◄─┼───P2P───┼─►│  Puertos expuestos:             │  │
-│  │  - Conpot (SCADA/ICS)           │  │cifrado  │  │   · 1514  (agentes)             │  │
-│  │  - Dicompot, Medpot, ...        │  │         │  │   · 1515  (registro)            │  │
-│  │                                 │  │         │  │   · 55000 (API)                 │  │
-│  │  IP Tailscale: 100.112.220.3    │  │         │  │   · 443   (dashboard)           │  │
-│  └─────────────────────────────────┘  │         │  └─────────────────────────────────┘  │
-│                                       │         │                                       │
-│  SSH admin: puerto 64295              │         │  IP Tailscale: 100.108.83.63          │
-└───────────────────────────────────────┘         └───────────────────────────────────────┘
-                     ▲
-                     │  Ataques reales de Internet
-                     │  (bots, escáneres, atacantes)
+```text
+        Internet
+   (bots y escáneres)
+            |
+            v
++-----------------------------------+
+| VPS pública                       |
+| Ubuntu 26.04 LTS                  |
+|                                   |
+| T-Pot (perfil mini)               |
+| - Cowrie                          |
+| - Dionaea                         |
+| - Suricata                        |
+| - Otros honeypots                 |
++-----------------------------------+
+            |
+            | Red privada Tailscale
+            | Conectividad configurada
+            |
+            v
++-----------------------------------+
+| Laboratorio local (VirtualBox)    |
+| Ubuntu 22.04 LTS                  |
+|                                   |
+| Wazuh Manager                     |
+| Wazuh Indexer                     |
+| Wazuh Dashboard                   |
+|                                   |
+| Agente local de prueba validado   |
++-----------------------------------+
 
+Integración de los logs de T-Pot con Wazuh:
+pendiente de completar y validar.
 ```
 
-El túnel Tailscale permite al agente Wazuh de la VPS enviar elementos al manager local sin exponer los puertos del SIEM a Internet.
+La conectividad Tailscale entre la VPS y el laboratorio está configurada. La instalación del agente Wazuh en la VPS, la configuración de la recogida de logs de T-Pot y la comprobación de su llegada al dashboard forman parte del trabajo pendiente de la fase 2.
 
-### Estado objetivo (Fase final)
+> **Nota de seguridad:** las direcciones IP privadas de Tailscale, los puertos administrativos y otros detalles específicos de la infraestructura se omiten del diagrama público. La configuración real de red y firewall debe consultarse en la documentación operativa privada o en los archivos de configuración correspondientes.
 
-- **Fase 3:** Reglas de detección custom + mapeo MITRE ATT&CK
-- **Fase 4:** Dashboards personalizados + Active Response + enriquecimiento 
----
+### Arquitectura objetivo
 
-## 4. Instalación
-
-Documentación detallada paso a paso en
-[`docs/01-installation.md`](docs/01-installation.md).
-
-**Resumen:**
-
-```bash
-# 1. Ajuste del kernel (crítico para Wazuh Indexer)
-sudo sysctl -w vm.max_map_count=262144
-echo "vm.max_map_count=262144" | sudo tee -a /etc/sysctl.conf
-sudo sysctl -p
-
-# 2. Descarga del instalador
-cd ~
-curl -sO https://packages.wazuh.com/4.9/wazuh-install.sh
-curl -sO https://packages.wazuh.com/4.9/config.yml
-chmod +x wazuh-install.sh
-
-# 3. Ajuste de config.yml (sustituir placeholders)
-sed -i 's/<indexer-node-ip>/127.0.0.1/g' config.yml
-sed -i 's/<wazuh-manager-ip>/127.0.0.1/g' config.yml
-sed -i 's/<dashboard-node-ip>/127.0.0.1/g' config.yml
-
-# 4. Instalación all-in-one
-sudo bash wazuh-install.sh -a
-soc@soc-VirtualBox:~/wazuh-tpot-soc$ echo "=== Git status ==="
-git status --short
-
-echo ""
-echo "=== ¿Qué dice el README de docs? ==="
-grep -A 8 "## 10. Documentación adicional" README.md
-
-echo ""
-echo "=== Fases del proyecto en README ==="
-grep -A 8 "## Fases del proyecto" README.md
-=== Git status ===
-M  .gitignore
-A  docs/06-vps-setup.md
-A  docs/adr/0002-tailscale-sobre-wireguard.md
-
-=== ¿Qué dice el README de docs? ===
-## 10. Documentación adicional
-
-- [Instalación detallada](docs/01-installation.md)
-- [Arquitectura](docs/02-architecture.md)
-- [Validación del agente](docs/03-agent-validation.md)
-- [Incidentes documentados](docs/04-incidents.md)
-- [Troubleshooting](docs/05-troubleshooting.md)
-- [Decisiones de diseño (ADR)](docs/adr/)
----
-
-=== Fases del proyecto en README ===
-## Fases del proyecto
-
-| Fase | Descripción | Estado |
-|---|---|---|
-| **1. Wazuh base** | SIEM desplegado en local + agente validado | ✅ Completada |
-| **2. Honeypot** | TPOT en VPS pública + túnel Tailscale | 🚧 En progreso |
-| **3. Detección** | Reglas custom + mapeo MITRE ATT&CK | ⏳ Pendiente |
-| **4. Visualización** | Dashboards + Active Response | ⏳ Pendiente |
-
-soc@soc-VirtualBox:~/wazuh-tpot-soc$ 
-```
+- **Fase 3:** reglas de detección específicas para la telemetría recogida y mapeo justificado a MITRE ATT&CK.
+- **Fase 4:** dashboards personalizados, enriquecimiento de indicadores y pruebas controladas de Active Response.
 
 ---
 
-## 5. Uso
+## 3. Instalación
 
-Acceso al dashboard desde el navegador de la VM:
+Los procedimientos completos se documentan por separado:
 
-```
+- [Instalación de Wazuh](docs/01-installation.md)
+- [Arquitectura del laboratorio](docs/02-architecture.md)
+- [Configuración de la VPS](docs/06-vps-setup.md)
+- [Instalación de T-Pot](docs/07-tpot-installation.md)
+
+La instalación y los comandos deben corresponder a las versiones realmente utilizadas en cada equipo. Consulta la documentación de instalación para los requisitos previos, la configuración y los pasos de validación.
+
+Para Wazuh Indexer, comprueba que el parámetro de kernel `vm.max_map_count` cumple el requisito de la versión instalada antes de iniciar el despliegue.
+
+---
+
+## 4. Uso y validación
+
+### Acceso al dashboard
+
+Desde el navegador de la máquina virtual, si el servicio está escuchando en la interfaz local:
+
+```text
 https://127.0.0.1
 ```
 
-Credenciales generadas por el instalador y almacenadas en
-`~/wazuh-install-files.tar`.
+Las credenciales iniciales se generan durante la instalación. Guarda el archivo de credenciales de forma segura y **no lo subas al repositorio**.
 
-Verificación rápida del estado:
+### Comprobar el estado de los servicios
 
-# Servicios activos
-```
+```bash
 sudo systemctl is-active wazuh-indexer wazuh-manager wazuh-dashboard
 ```
 
-# Estado del cluster
-curl -sk -u admin:TU_PASSWORD https://localhost:9200/_cluster/health?pretty
+### Comprobar la salud del clúster
+
+Sustituye `TU_PASSWORD` por la contraseña correspondiente. Evita guardar contraseñas reales en el historial de shell o en archivos versionados.
+
+```bash
+curl -sk -u "admin:TU_PASSWORD" \
+  "https://localhost:9200/_cluster/health?pretty"
 ```
+
+La salida de estos comandos debe interpretarse junto con los logs de los servicios. Un comando correcto por sí solo no demuestra que la telemetría de T-Pot esté integrada.
+
 ---
 
-## 6. Capturas
+## 5. Evidencias
 
 ### Wazuh Dashboard — Overview con agente activo
 
 ![Dashboard overview](docs/diagrams/dashboard-overview.png)
 
-*Panel principal del Wazuh Dashboard mostrando 1 agente activo.*
+*Panel principal de Wazuh con un agente activo.*
 
 ### Agents — Agente conectado
 
 ![Agents active](docs/diagrams/agents-active.png)
 
-*El agente `agent-test` en estado Active en la vista de Agents.*
+El agente `agent-test` aparece en estado `Active` en la vista de agentes.
 
 ### Security Events — Eventos del agente
 
 ![Security events](docs/diagrams/security-events.png)
 
-*Discover filtrado por `agent.name: agent-test` mostrando 216 eventos capturados.*
+Vista de Discover filtrada por `agent.name: agent-test`, con 216 eventos en la consulta documentada. Estos eventos corresponden al agente de prueba y **no deben interpretarse como 216 ataques reales procedentes de T-Pot**.
 
 ---
 
-## 7. Testing
+## 6. Testing
 
-Pendiente de implementar cuando se añadan las reglas de detección.
+Las pruebas automatizadas de las reglas personalizadas están pendientes de implementar.
 
-Los tests previstos validarán que las reglas personalizadas disparan con
-eventos de ejemplo (logs sintéticos de Cowrie, Dionaea y Suricata).
+Está previsto validar las reglas con eventos de ejemplo asociados a Cowrie, Dionaea y Suricata. Cada prueba deberá documentar:
+
+- El evento de entrada y su origen.
+- La regla que se espera que se active.
+- El resultado observado.
+- El nivel de alerta y los campos relevantes.
+- El mapeo a MITRE ATT&CK, cuando corresponda.
 
 ---
 
-## 8. Seguridad
+## 7. Seguridad
 
 ### Gestión de secretos
 
-Este repositorio **no contiene credenciales reales**. Patrón seguido:
+El repositorio no debe contener credenciales reales. El patrón previsto es:
 
-- `.env.example` → plantilla pública con valores `CHANGE_ME`
-- `.env` → fichero local con valores reales, ignorado por git
+- `.env.example`: plantilla pública con valores de ejemplo.
+- `.env`: configuración local con valores reales, excluida del control de versiones.
 
-El `.gitignore` bloquea explícitamente:
+El `.gitignore` contempla la exclusión de:
 
-- Ficheros `.env` y variantes
-- Claves y certificados (`*.pem`, `*.key`, `*.crt`)
-- Claves Tailscale (`privatekey`, `publickey`)
-- Credenciales del instalador (`wazuh-passwords.txt`, `wazuh-install-files.tar`)
+- Archivos `.env` y variantes.
+- Claves y certificados (`*.pem`, `*.key`, `*.crt`).
+- Archivos de claves de Tailscale.
+- Archivos de credenciales generados por el instalador de Wazuh.
+
+Estas exclusiones reducen el riesgo de publicar secretos, pero no sustituyen la revisión de los cambios antes de cada `commit`.
 
 ### Superficie de exposición
 
-- El dashboard **no se expone directamente a Internet**.
-- El acceso se realiza desde la red local o por túnel Tailscale.
-- La VPS solo expone los puertos de los honeypots (deliberadamente vulnerable).
+- El dashboard de Wazuh no debe exponerse directamente a Internet.
+- El acceso de administración debe limitarse a interfaces y redes de confianza.
+- La VPS pública aloja los servicios señuelo de T-Pot, cuya exposición es intencionada.
+- Los puertos de administración y de comunicación de Wazuh deben restringirse mediante firewall a los orígenes necesarios.
+- Antes de publicar capturas o documentación, revisa que no incluyan direcciones, tokens, contraseñas, claves ni otros datos operativos que no quieras divulgar.
 
 ### Aviso legal
 
-Este proyecto se usa exclusivamente contra infraestructura propia.
-Nunca ataques sistemas de terceros sin autorización por escrito.
+Este laboratorio se utiliza para aprendizaje y observación de actividad dirigida a infraestructura propia. No realices pruebas contra sistemas de terceros sin autorización expresa.
 
 ---
 
-## 9. Roadmap
+## 8. Roadmap
 
 ### Fase 1 — Wazuh base
-- [x] Desplegar Wazuh todo-en-uno en Ubuntu 22.04
-- [x] Verificar cluster `green` y acceso al dashboard
-- [x] Conectar agente Wazuh local para validar pipeline
+
+- [x] Desplegar Wazuh todo-en-uno en Ubuntu 22.04.
+- [x] Verificar el estado del clúster y el acceso al dashboard.
+- [x] Conectar un agente local para validar el pipeline básico.
 
 ### Fase 2 — Honeypot en VPS
-- [x] Contratar VPS (Contabo) y preparar el sistema
-- [x] Configurar túnel Tailscale VPS ↔ manager local
-- [x] Verificar conectividad y puertos Wazuh a través del túnel
-- [x] Instalar T-Pot (perfil mini) en la VPS
-- [x] Verificar arranque de los contenedores de honeypots
-- [ ] Instalar agente Wazuh en la VPS
-- [ ] Configurar `localfiles` para los logs de T-Pot
-- [ ] Verificar llegada de eventos reales al dashboard
+
+- [x] Contratar la VPS y preparar el sistema.
+- [x] Configurar Tailscale entre la VPS y el laboratorio.
+- [x] Verificar la conectividad y los puertos necesarios a través del túnel.
+- [x] Instalar T-Pot (perfil mini) en la VPS.
+- [x] Verificar el arranque de los contenedores de honeypots.
+- [ ] Instalar el agente Wazuh en la VPS.
+- [ ] Configurar la recogida de logs de T-Pot mediante `localfile` u otro mecanismo compatible con la fuente de logs.
+- [ ] Validar la llegada de eventos de T-Pot al dashboard de Wazuh.
 
 ### Fase 3 — Detección
-- [ ] Añadir reglas de detección para Cowrie
-- [ ] Añadir reglas de detección para Dionaea
-- [ ] Añadir reglas de detección para Suricata
-- [ ] Documentar cada regla con mapeo MITRE ATT&CK
-- [ ] Añadir tests de reglas con eventos de ejemplo
+
+- [ ] Crear reglas de detección para Cowrie.
+- [ ] Crear reglas de detección para Dionaea.
+- [ ] Crear reglas de detección para Suricata.
+- [ ] Documentar las reglas y su mapeo a MITRE ATT&CK.
+- [ ] Añadir pruebas con eventos de ejemplo.
 
 ### Fase 4 — Visualización y respuesta
-- [ ] Exportar dashboards personalizados como código (ndjson)
-- [ ] Añadir Active Response para bloqueo de IPs
-- [ ] Integrar enriquecimiento (VirusTotal, AbuseIPDB, OTX)
+
+- [ ] Exportar dashboards personalizados y versionarlos cuando sea viable.
+- [ ] Evaluar y probar Active Response en condiciones controladas.
+- [ ] Integrar enriquecimiento con fuentes como VirusTotal, AbuseIPDB u OTX, respetando sus límites y condiciones de uso.
 
 ---
 
-## 10. Documentación adicional
+## 9. Documentación adicional
 
 - [Instalación detallada](docs/01-installation.md)
 - [Arquitectura](docs/02-architecture.md)
@@ -284,30 +251,34 @@ Nunca ataques sistemas de terceros sin autorización por escrito.
 - [Configuración de la VPS](docs/06-vps-setup.md)
 - [Instalación de T-Pot](docs/07-tpot-installation.md)
 - [Decisiones de diseño (ADR)](docs/adr/)
+
 ---
 
-## 11. Incidencias documentadas
+## 10. Incidencias documentadas
 
-Durante la construcción del laboratorio han aparecido problemas reales
-documentados en [`docs/04-incidents.md`](docs/04-incidents.md):
+Durante el desarrollo del laboratorio se han registrado incidencias y tareas de troubleshooting en [`docs/04-incidents.md`](docs/04-incidents.md).
 
 ### Fase 1 — Wazuh base
 
-1. `wazuh-agent` destruye `wazuh-manager` en el mismo host
-2. Dashboard roto tras reinstall del manager (403 + `version_conflict`)
-3. Manager no arranca por timeout de systemd
-4. Locks huérfanos en `/var/ossec/var/run/` tras timeout
-5. Indexer no arranca por timeout de systemd (mismo patrón)
+1. Conflicto al instalar `wazuh-agent` y `wazuh-manager` en el mismo host.
+2. Dashboard afectado tras reinstalar el manager (`403` y `version_conflict`).
+3. Manager que no arranca por timeout de systemd.
+4. Locks huérfanos en `/var/ossec/var/run/` después de un timeout.
+5. Indexer que no arranca por timeout de systemd.
 
-### Fase 2 — VPS + Tailscale
+### Fase 2 — VPS y Tailscale
 
-6. DNS roto tras cambiar adaptador de red en VirtualBox
-7. Tailscale: autenticación por URL no sincroniza
-8. Sesión de Tailscale caduca entre sesiones SSH
-9. T-Pot rechaza Ubuntu 24.04 — requiere 26.04
-10. T-Pot no se puede instalar desde root
-11. Manager sin clave SSH — no se puede autenticar por clave
+6. Problema de DNS tras cambiar el adaptador de red de VirtualBox.
+7. Autenticación de Tailscale mediante URL que no se sincroniza como se esperaba.
+8. Sesión de Tailscale que caduca entre sesiones SSH.
+9. Problemas de compatibilidad de T-Pot con la versión de Ubuntu probada; consultar el informe de incidencia para conocer el entorno y el error exactos.
+10. Instalación de T-Pot rechazada al ejecutarse como `root`.
+11. Problemas de autenticación SSH por ausencia de una clave configurada en el manager.
+
+Consulta el registro de incidencias para conocer el contexto, el diagnóstico y la resolución aplicada en cada caso.
+
+---
 
 ## Licencia
 
-MIT — ver [LICENSE](LICENSE).
+MIT — consulta el archivo [LICENSE](LICENSE).
