@@ -174,7 +174,9 @@ Credenciales generadas por el instalador y almacenadas en
 Verificación rápida del estado:
 
 # Servicios activos
+```
 sudo systemctl is-active wazuh-indexer wazuh-manager wazuh-dashboard
+```
 
 # Estado del cluster
 curl -sk -u admin:TU_PASSWORD https://localhost:9200/_cluster/health?pretty
