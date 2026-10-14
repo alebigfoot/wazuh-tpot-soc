@@ -87,7 +87,7 @@ en Internet.
 
 El túnel Tailscale permite al agente Wazuh de la VPS enviar elementos al manager local sin exponer los puertos del SIEM a Internet.
 
-## Estado objetivo (Fase final)
+### Estado objetivo (Fase final)
 
 - **Fase 3:** Reglas de detección custom + mapeo MITRE ATT&CK
 - **Fase 4:** Dashboards personalizados + Active Response + enriquecimiento 
