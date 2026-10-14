@@ -173,7 +173,6 @@ Credenciales generadas por el instalador y almacenadas en
 
 Verificación rápida del estado:
 
-```bash- [Instalación de T-Pot](docs/07-tpot-installation.md)
 # Servicios activos
 sudo systemctl is-active wazuh-indexer wazuh-manager wazuh-dashboard
 
