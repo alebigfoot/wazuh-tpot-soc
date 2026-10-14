@@ -8,7 +8,7 @@
 ![Estado](https://img.shields.io/badge/Estado-Activo-success)
 
 Laboratorio SOC personal para practicar operativa Blue Team: despliegue de un
-SIEM (Wazuh) en local y un honeypot multi-servicio (TPOT) en una VPS pública,
+SIEM (Wazuh) en local y un honeypot multi-servicio (T-Pot) en una VPS pública,
 conectados por túnel Tailscale. Los ataques reales contra el honeypot se
 detectan, enriquecen y visualizan en tiempo real.
 
