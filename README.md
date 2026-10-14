@@ -18,7 +18,7 @@ detectan, enriquecen y visualizan en tiempo real.
 | Fase | Descripción | Estado |
 |---|---|---|
 | **1. Wazuh base** | SIEM desplegado en local + agente validado | ✅ Completada |
-| **2. Honeypot** | TPOT en VPS pública + túnel Tailscale | 🚧 En progreso |
+| **2. Honeypot** | T-Pot en VPS pública + túnel Tailscale | 🚧 En progreso |
 | **3. Detección** | Reglas custom + mapeo MITRE ATT&CK | ⏳ Pendiente |
 | **4. Visualización** | Dashboards + Active Response | ⏳ Pendiente |
 
@@ -177,7 +177,7 @@ Credenciales generadas por el instalador y almacenadas en
 
 Verificación rápida del estado:
 
-```bash
+```bash- [Instalación de T-Pot](docs/07-tpot-installation.md)
 # Servicios activos
 sudo systemctl is-active wazuh-indexer wazuh-manager wazuh-dashboard
 
@@ -242,10 +242,14 @@ Nunca ataques sistemas de terceros sin autorización por escrito.
 - [x] Conectar agente Wazuh local para validar pipeline
 
 ### Fase 2 — Honeypot en VPS
-- [ ] Contratar VPS y desplegar TPOT
-- [ ] Configurar túnel Tailscale VPS ↔ local
-- [ ] Conectar agente Wazuh de la VPS
-- [ ] Verificar llegada de eventos reales al SIEM
+- [x] Contratar VPS (Contabo) y preparar el sistema
+- [x] Configurar túnel Tailscale VPS ↔ manager local
+- [x] Verificar conectividad y puertos Wazuh a través del túnel
+- [x] Instalar T-Pot (perfil mini) en la VPS
+- [x] Verificar arranque de los contenedores de honeypots
+- [ ] Instalar agente Wazuh en la VPS
+- [ ] Configurar `localfiles` para los logs de T-Pot
+- [ ] Verificar llegada de eventos reales al dashboard
 
 ### Fase 3 — Detección
 - [ ] Añadir reglas de detección para Cowrie
@@ -269,6 +273,7 @@ Nunca ataques sistemas de terceros sin autorización por escrito.
 - [Incidentes documentados](docs/04-incidents.md)
 - [Troubleshooting](docs/05-troubleshooting.md)
 - [Configuración de la VPS](docs/06-vps-setup.md)
+- [Instalación de T-Pot](docs/07-tpot-installation.md)
 - [Decisiones de diseño (ADR)](docs/adr/)
 ---
 
