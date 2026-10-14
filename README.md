@@ -279,7 +279,7 @@ Nunca ataques sistemas de terceros sin autorización por escrito.
 
 ## 11. Incidencias documentadas
 
-Durante la construcción del laboratorio han aparecido **8 problemas reales**
+Durante la construcción del laboratorio han aparecido algunos problemas reales
 documentados en [`docs/04-incidents.md`](docs/04-incidents.md):
 
 ### Fase 1 — Wazuh base

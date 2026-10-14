@@ -24,6 +24,9 @@ Wazuh. Cada sección incluye: síntoma, diagnóstico y solución.
 12. [Tailscale no autentica (URL caduca)](#12-tailscale-no-autentica-url-caduca)
 13. [Tailscale muestra "Logged out" tras reconectar](#13-tailscale-muestra-logged-out-tras-reconectar)
 14. [Pérdida de DNS al cambiar adaptador en VirtualBox](#14-pérdida-de-dns-al-cambiar-adaptador-en-virtualbox)
+15. [T-Pot rechaza la versión del sistema](#15-t-pot-rechaza-la-versión-del-sistema)
+16. [T-Pot no se ejecuta como root](#16-t-pot-no-se-ejecuta-como-root)
+17. [Contenedores de T-Pot no arrancan](#17-contenedores-de-t-pot-no-arrancan)
 
 ---
 
@@ -831,6 +834,203 @@ dig google.com +short
 - En Ubuntu Desktop, NetworkManager manda → usar `nmcli`.
 - En Ubuntu Server, systemd-networkd manda → usar `netplan`.
 - Si Tailscale está instalado, revisar `--accept-dns` inmediatamente.
+
+---
+
+## 15. T-Pot rechaza la versión del sistema
+
+### Síntoma
+
+Al lanzar el instalador de T-Pot:
+
+```
+### T-Pot supports Ubuntu 26.04, this system runs 24.04.
+### Please install T-Pot on the current release of your distribution.
+```
+
+### Causa
+
+T-Pot exige **la última LTS de Ubuntu**. Cada release de T-Pot se alinea
+con la versión LTS más reciente.
+
+### Solución
+
+Actualizar la VPS:
+
+```bash
+# Verificar versión actual
+lsb_release -rs
+
+# Actualizar la distribución
+sudo apt update && sudo apt upgrade -y
+sudo do-release-upgrade
+
+# Tras el reinicio
+lsb_release -rs
+# 26.04
+```
+
+### Precauciones
+
+- Hacer un **snapshot** de la VPS antes del upgrade (desde el panel del
+  proveedor).
+- Abrir la **consola VNC** del proveedor en otra pestaña por si se pierde
+  el acceso SSH.
+- El upgrade tarda 30-60 min.
+
+### Alternativa descartada
+
+Usar una versión antigua de T-Pot (`git clone --branch v24.04.1`).
+Descartado por:
+
+- Versión sin actualizaciones de seguridad
+- Puede faltar soporte de honeypots nuevos
+- Sin mejoras recientes
+
+### Verificar tras el upgrade
+
+```bash
+lsb_release -a
+uname -r
+systemctl --failed
+tailscale status
+```
+
+---
+
+## 16. T-Pot no se ejecuta como root
+
+### Síntoma
+
+Al ejecutar el instalador con `sudo`:
+
+```
+This script should not be run as root. Please run it as a regular user.
+```
+
+### Causa
+
+El script comprueba el UID y aborta si es 0 (root). Está por diseño:
+quiere ejecutarse desde un usuario normal que solicite `sudo` cuando haga
+falta.
+
+### Solución
+
+Crear un usuario normal con sudo:
+
+```bash
+sudo adduser tadmin
+sudo usermod -aG sudo tadmin
+```
+
+Añadir la clave SSH pública a ese usuario:
+
+```bash
+cat ~/.ssh/id_ed25519.pub | ssh tadmin@<VPS_IP> \
+  "mkdir -p ~/.ssh && chmod 700 ~/.ssh && \
+   cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+```
+
+Conectar como `tadmin` y ejecutar **sin `sudo`**:
+
+```bash
+ssh -i ~/.ssh/id_ed25519 tadmin@<VPS_IP>
+cd ~/tpotce
+./install.sh -t i -u tadmin -p '<PASSWORD>'
+```
+
+### Truco para no meter la contraseña cada vez
+
+```bash
+sudo -v              # refresca el timestamp de sudo
+./install.sh ...     # el script usará el timestamp sin pedir contraseña
+```
+
+### Verificar
+
+Mientras se ejecuta, si pide contraseña es porque el timestamp ha
+caducado. Mete la contraseña y sigue.
+
+---
+
+## 17. Contenedores de T-Pot no arrancan
+
+### Síntoma
+
+Tras la instalación, `sudo docker ps` muestra:
+
+- Menos contenedores de los esperados (deberían ser ~23)
+- Algunos con estado `Restarting` o `Exited`
+- Otros con `(unhealthy)`
+
+### Diagnóstico
+
+```bash
+# Ver todos los contenedores (incluyendo los que han fallado)
+sudo docker ps -a
+
+# Ver logs de un contenedor problemático
+sudo docker logs <nombre_contenedor> --tail 50
+
+# Ver estado del servicio T-Pot
+sudo systemctl status tpot --no-pager
+
+# Ver uso de recursos
+free -h
+df -h /
+```
+
+### Causas y soluciones
+
+| Causa | Solución |
+|---|---|
+| **RAM insuficiente** | Verificar `free -h`. Añadir swap o reducir perfil de T-Pot. |
+| **Disco lleno** | `df -h /` → limpiar logs antiguos o ampliar disco. |
+| **Contenedor con puerto ocupado** | `sudo ss -tlnp \| grep <PUERTO>` → matar el proceso que ocupa el puerto. |
+| **Imagen corrupta** | `sudo docker pull ghcr.io/telekom-security/<imagen>:24.04.1` |
+| **Dependencia caída** | Reiniciar el servicio: `sudo systemctl restart tpot` |
+
+### Reiniciar T-Pot completo
+
+```bash
+# Parar todos los contenedores
+sudo systemctl stop tpot
+
+# Verificar que no queda ninguno
+sudo docker ps
+
+# Arrancar de nuevo
+sudo systemctl start tpot
+
+# Ver estado
+sudo systemctl status tpot
+```
+
+### Verificar que arrancan todos
+
+```bash
+# Esperar 2-3 minutos tras el arranque
+sleep 180
+
+# Contar contenedores activos
+sudo docker ps -q | wc -l
+# Esperado: ~23
+```
+
+### Si un contenedor concreto falla siempre
+
+```bash
+# Ver su log detallado
+sudo docker logs <nombre> --tail 100
+
+# Probar arrancarlo manualmente
+sudo docker start <nombre>
+
+# Ver por qué murió
+sudo docker inspect <nombre> | jq '.[0].State'
+```
+
+---
 
 ## Comandos rápidos de referencia
 

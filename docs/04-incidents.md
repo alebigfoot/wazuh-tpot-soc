@@ -509,6 +509,214 @@ tailscale status
 
 ---
 
+## Incidente 9: T-Pot rechaza Ubuntu 24.04 — requiere 26.04
+
+**Fecha:** 2026-10-14
+
+### Síntoma
+
+Al lanzar el instalador de T-Pot en una VPS con Ubuntu 24.04, el script
+aborta inmediatamente con:
+
+```
+### T-Pot supports Ubuntu 26.04, this system runs 24.04.
+### Please install T-Pot on the current release of your distribution.
+```
+
+### Causa
+
+La versión actual de T-Pot (24.04.1) **solo soporta la LTS más reciente
+de Ubuntu**. Las versiones anteriores de T-Pot aceptaban también 22.04 y
+24.04, pero la actual ha endurecido este requisito.
+
+### Solución aplicada
+
+Actualizar la VPS a Ubuntu 26.04:
+
+```bash
+# Actualizar paquetes actuales
+sudo apt update && sudo apt upgrade -y
+
+# Actualizar la distribución (tarda ~45 min)
+sudo do-release-upgrade
+```
+
+Tras el reinicio:
+
+```bash
+lsb_release -rs
+# 26.04
+```
+
+Y reintentar el instalador de T-Pot.
+
+### Lección
+
+- **Verificar los requisitos del sistema antes de instalar**. La página
+  del proyecto o el `README` suele indicar la versión soportada.
+- T-Pot es estricto con las versiones: seguir la más reciente del
+  fabricante evita problemas.
+- Antes de hacer `do-release-upgrade`, **hacer un snapshot** de la VPS
+  desde el panel del proveedor.
+
+---
+
+## Incidente 10: T-Pot no se puede instalar desde root
+
+**Fecha:** 2026-10-14
+
+### Síntoma
+
+Al ejecutar el instalador con `sudo`:
+
+```bash
+sudo ./install.sh -t i -u tadmin -p 'PASS'
+```
+
+El script aborta con:
+
+```
+This script should not be run as root. Please run it as a regular user.
+```
+
+### Causa
+
+El instalador de T-Pot comprueba el UID del usuario actual:
+
+```bash
+if [ "$(id -u)" -eq 0 ]; then
+  echo "This script should not be run as root. Please run it as a regular user."
+  exit 1
+fi
+```
+
+Cuando se ejecuta con `sudo`, `id -u` devuelve `0` (root), y el script
+aborta por diseño.
+
+El motivo es que T-Pot hace cambios profundos en el sistema (usuarios,
+SSH, firewall) y quiere hacerlo desde un contexto controlado, no desde
+root directo.
+
+### Solución aplicada
+
+Crear primero un usuario normal con permisos sudo:
+
+```bash
+sudo adduser tadmin
+sudo usermod -aG sudo tadmin
+```
+
+Añadir la clave SSH pública al usuario:
+
+```bash
+cat ~/.ssh/id_ed25519.pub | ssh tadmin@<VPS_IP> \
+  "mkdir -p ~/.ssh && chmod 700 ~/.ssh && \
+   cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+```
+
+Conectar como `tadmin` y ejecutar el instalador **sin `sudo`**:
+
+```bash
+ssh -i ~/.ssh/id_ed25519 tadmin@<VPS_IP>
+cd ~/tpotce
+./install.sh -t i -u tadmin -p '<PASSWORD>'
+```
+
+El propio script solicitará `sudo` internamente cuando lo necesite.
+
+### Lección
+
+- Algunos instaladores **rechazan ejecutarse como root** por diseño. Es
+  una medida de seguridad que evita errores difíciles de revertir.
+- Si un script comprueba el UID, **leer su documentación** para saber
+  cómo debe ejecutarse.
+- Truco para evitar meter la contraseña muchas veces:
+  ```bash
+  sudo -v              # refresca el timestamp de sudo
+  ./install.sh ...     # ejecuta sin sudo (usa el timestamp anterior)
+  ```
+
+---
+
+## Incidente 11: Manager sin clave SSH — no se puede autenticar por clave
+
+**Fecha:** 2026-10-14
+
+### Síntoma
+
+Al intentar conectar desde el manager a la VPS por clave SSH:
+
+```bash
+ssh -i ~/.ssh/id_ed25519 tadmin@<VPS_IP>
+```
+
+El comando falla con:
+
+```
+Warning: Identity file /home/soc/.ssh/id_ed25519 not accessible: No such file or directory.
+tadmin@<VPS_IP>'s password:
+```
+
+Es decir: **la clave no existe** y hay que autenticarse por contraseña.
+
+### Causa
+
+En el manager **nunca se había generado una clave SSH**. El directorio
+`~/.ssh/` solo contenía:
+
+- `known_hosts` (registro de servidores visitados)
+- `known_hosts.old`
+
+Sin claves, todos los comandos con `-i ~/.ssh/id_ed25519` fallan y el
+sistema cae al método alternativo (contraseña).
+
+### Solución aplicada
+
+Generar la clave:
+
+```bash
+ssh-keygen -t ed25519 -C "soc-manager" -f ~/.ssh/id_ed25519
+```
+
+(Pulsar Enter dos veces para no poner passphrase en un lab.)
+
+Verificar:
+
+```bash
+ls -la ~/.ssh/
+# id_ed25519
+# id_ed25519.pub
+```
+
+Y añadir la clave pública a los usuarios de la VPS:
+
+```bash
+cat ~/.ssh/id_ed25519.pub | ssh tadmin@<VPS_IP> \
+  "mkdir -p ~/.ssh && chmod 700 ~/.ssh && \
+   cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+
+cat ~/.ssh/id_ed25519.pub | ssh root@<VPS_IP> \
+  "mkdir -p ~/.ssh && chmod 700 ~/.ssh && \
+   cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+```
+
+Verificar conexión sin contraseña:
+
+```bash
+ssh -i ~/.ssh/id_ed25519 tadmin@<VPS_IP> "hostname"
+```
+
+### Lección
+
+- **Generar una clave SSH al preparar cualquier entorno nuevo.** Es un
+  paso trivial pero se olvida con frecuencia.
+- Sin clave pública, cualquier automatización que dependa de SSH se
+  bloquea pidiendo contraseña interactiva.
+- El directorio `~/.ssh/` con solo `known_hosts` indica claramente que
+  nunca se ha generado clave en ese host.
+
+---
+
 ## Plantilla para próximos incidentes
 
 ```markdown
