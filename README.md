@@ -98,15 +98,15 @@ El túnel Tailscale permite al agente Wazuh de la VPS enviar elementos al manage
 │  │  - Dionaea         │  │         │  │  Wazuh Dashboard   │  │
 │  │  - Suricata        │  │         │  │  + Agente Wazuh    │  │
 │  └────────────────────┘  │         │  └────────────────────┘  │
-│  10.10.0.2 (Tailscale)   │         │  10.10.0.1 (Tailscale)   │
+│ 100.112.220.3(Tailscale) │         │ 100.108.83.63(Tailscale) │
 └──────────────────────────┘         └──────────────────────────┘
          ▲
          │  Ataques reales de Internet
          │  (bots, escáneres, atacantes)
 ```
 
-**Fase 3:** Reglas de detección custom + mapeo MITRE ATT&CK
-**Fase 4:** Dashboards personalizados + Active Response + enriquecimiento 
+- **Fase 3:** Reglas de detección custom + mapeo MITRE ATT&CK
+- **Fase 4:** Dashboards personalizados + Active Response + enriquecimiento 
 ---
 
 ## 4. Instalación
