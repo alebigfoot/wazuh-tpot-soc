@@ -58,9 +58,9 @@ Los puertos `9200` y `9300` del Indexer **no se exponen**. Solo escuchan en
 
 ```bash
 cd ~
-curl -sO https://packages.wazuh.com/4.9/wazuh-install.sh
-curl -sO https://packages.wazuh.com/4.9/config.yml
+curl -sO https://packages.wazuh.com/4.14/wazuh-install.sh
 chmod +x wazuh-install.sh
+sudo bash wazuh-install.sh -a
 ```
 
 ### 5. Configuración del `config.yml`
