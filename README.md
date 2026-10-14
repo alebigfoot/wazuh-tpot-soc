@@ -1,4 +1,4 @@
-# Wazuh + TPOT SOC Lab
+# Wazuh + T-Pot SOC Lab
 
 ![Fase 1](https://img.shields.io/badge/Fase%201-Completada-brightgreen)
 ![Wazuh](https://img.shields.io/badge/Wazuh-4.14.8-blue)
