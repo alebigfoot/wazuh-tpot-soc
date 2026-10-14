@@ -218,13 +218,13 @@ El `.gitignore` bloquea explícitamente:
 
 - Ficheros `.env` y variantes
 - Claves y certificados (`*.pem`, `*.key`, `*.crt`)
-- Claves WireGuard (`privatekey`, `publickey`)
+- Claves Tailscale (`privatekey`, `publickey`)
 - Credenciales del instalador (`wazuh-passwords.txt`, `wazuh-install-files.tar`)
 
 ### Superficie de exposición
 
 - El dashboard **no se expone directamente a Internet**.
-- El acceso se realiza desde la red local o por túnel WireGuard.
+- El acceso se realiza desde la red local o por túnel Tailscale.
 - La VPS solo expone los puertos de los honeypots (deliberadamente vulnerable).
 
 ### Aviso legal
