@@ -1,8 +1,9 @@
 # Wazuh + T-Pot SOC Lab
 
 ![Fase 1](https://img.shields.io/badge/Fase%201-Completada-brightgreen)
+![Fase 2](https://img.shields.io/badge/Fase%202-En%20progreso-yellow)
 ![Wazuh](https://img.shields.io/badge/Wazuh-4.14.8-blue)
-![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%20LTS-orange)
+![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%20%7C%2026.04-orange)
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-lightgrey)
 ![Estado](https://img.shields.io/badge/Estado-Activo-success)
 
@@ -86,6 +87,8 @@ en Internet.
 
 El túnel Tailscale permite al agente Wazuh de la VPS enviar elementos al manager local sin exponer los puertos del SIEM a Internet.
 
+## Estado objetivo (Fase final)
+
 - **Fase 3:** Reglas de detección custom + mapeo MITRE ATT&CK
 - **Fase 4:** Dashboards personalizados + Active Response + enriquecimiento 
 ---
@@ -95,7 +98,7 @@ El túnel Tailscale permite al agente Wazuh de la VPS enviar elementos al manage
 Documentación detallada paso a paso en
 [`docs/01-installation.md`](docs/01-installation.md).
 
-**Resumen rápido:**
+**Resumen:**
 
 ```bash
 # 1. Ajuste del kernel (crítico para Wazuh Indexer)
@@ -154,8 +157,6 @@ A  docs/adr/0002-tailscale-sobre-wireguard.md
 
 soc@soc-VirtualBox:~/wazuh-tpot-soc$ 
 ```
-
-Duración estimada: 10-20 minutos.
 
 ---
 
