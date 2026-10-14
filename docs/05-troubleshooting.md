@@ -20,6 +20,10 @@ Wazuh. Cada sección incluye: síntoma, diagnóstico y solución.
 8. [El agente aparece como "Never connected"](#8-el-agente-aparece-como-never-connected)
 9. [Los eventos no llegan al dashboard](#9-los-eventos-no-llegan-al-dashboard)
 10. [Diagnóstico general del sistema](#10-diagnóstico-general-del-sistema)
+11. [DNS no resuelve en el manager](#11-dns-no-resuelve-en-el-manager)
+12. [Tailscale no autentica (URL caduca)](#12-tailscale-no-autentica-url-caduca)
+13. [Tailscale muestra "Logged out" tras reconectar](#13-tailscale-muestra-logged-out-tras-reconectar)
+14. [Pérdida de DNS al cambiar adaptador en VirtualBox](#14-pérdida-de-dns-al-cambiar-adaptador-en-virtualbox)
 
 ---
 
@@ -554,6 +558,279 @@ df -h /
 Guarda esto como script: `automation/scripts/health-check.sh`
 
 ---
+
+## 11. DNS no resuelve en el manager
+
+### Síntoma
+
+```bash
+$ dig google.com
+;; communications error to 127.0.0.53#53: timed out
+;; no servers could be reached
+```
+
+Pero `ping 9.9.9.9` **sí funciona** (conectividad IP OK, solo falla resolución).
+
+### Diagnóstico
+
+```bash
+# Ver el resolver actual
+resolvectl status
+
+# Ver qué DNS tiene cada interfaz
+resolvectl status | grep -A3 "Link"
+
+# Ver el contenido del stub
+cat /etc/resolv.conf
+```
+
+### Causas y soluciones
+
+| Causa | Solución |
+|---|---|
+| Tailscale secuestra el DNS | `sudo tailscale set --accept-dns=false` |
+| NetworkManager con DNS del router caído | `nmcli connection modify <UUID> ipv4.dns "9.9.9.9,1.1.1.1" ipv4.ignore-auto-dns yes` |
+| systemd-resolved sin upstream | Reiniciar: `sudo systemctl restart systemd-resolved` |
+| Fichero netplan mal configurado | Editar `/etc/netplan/*.yaml` y `sudo netplan apply` |
+
+### Solución rápida (Ubuntu Desktop con NetworkManager)
+
+```bash
+# Ver la conexión activa
+nmcli connection show --active
+
+# Configurar DNS manual
+sudo nmcli connection modify <UUID> \
+  ipv4.dns "9.9.9.9,1.1.1.1,8.8.8.8" \
+  ipv4.ignore-auto-dns yes
+
+# Desactivar DNS de Tailscale
+sudo tailscale set --accept-dns=false
+
+# Aplicar cambios
+sudo nmcli connection down <UUID>
+sudo nmcli connection up <UUID>
+
+# Verificar
+dig google.com +short
+```
+
+### Verificación
+
+```bash
+resolvectl status | grep "Current DNS Server"
+# Debe mostrar 9.9.9.9 (o el que hayas configurado)
+
+dig google.com +short
+# Debe devolver IPs
+```
+
+---
+
+## 12. Tailscale no autentica (URL caduca)
+
+### Síntoma
+
+```bash
+$ sudo tailscale up --accept-dns=false
+
+To authenticate, visit:
+https://login.tailscale.com/a/xxxxxxxxxxxx
+```
+
+- Abres la URL, autorizas en el navegador
+- El panel web muestra la máquina como conectada
+- **Pero `tailscale status` sigue diciendo `Logged out`**
+
+### Causa
+
+El flujo de autenticación por URL es **frágil**:
+
+- Las URLs **caducan en 10-15 minutos**
+- Si el navegador tiene auto-login con otra cuenta, se autoriza en el sitio equivocado
+- El proceso `tailscale up` a veces no recibe la confirmación del servidor
+
+### Solución: usar auth key
+
+**En el navegador:**
+
+1. Ve a `https://login.tailscale.com/admin/settings/keys`
+2. **Generate auth key...**
+3. Configura:
+   - Reusable: ✅
+   - Ephemeral: ❌
+   - Pre-approved: ✅
+   - Expiration: 90 días
+4. Copia la key (`tskey-auth-...`)
+
+**En el servidor:**
+
+```bash
+# Cancelar intentos previos
+pkill -f "tailscale up" 2>/dev/null
+tailscale logout
+
+# Autenticar con la key
+sudo tailscale up --authkey=tskey-auth-XXXXXXXXX --accept-dns=false
+```
+
+**Resultado:** autenticación instantánea, sin navegador, sin URLs.
+
+### Verificación
+
+```bash
+tailscale status
+tailscale ip -4
+```
+
+### Regla
+
+**Para servidores y automatización → auth key.**
+**Para laptops y uso manual → URL (aceptable).**
+
+---
+
+## 13. Tailscale muestra "Logged out" tras reconectar
+
+### Síntoma
+
+Tras un rato, o tras reconectar por SSH:
+
+```bash
+$ tailscale status
+Logged out.
+Log in at: https://login.tailscale.com/a/xxxxxxxxxxxx
+```
+
+Pero la máquina **sí aparece en el panel web** de Tailscale con IP asignada.
+
+### Causa
+
+Inconsistencia entre el **control plane** (servidor de Tailscale) y el
+**cliente local** (`tailscaled`):
+
+- El panel web muestra el dispositivo registrado
+- El cliente local no ha persistido el token de sesión
+- Puede pasar por: autenticación previa sin completar, corrupción del
+  estado local, o conflictos con procesos `tailscale up` colgados
+
+### Solución
+
+```bash
+# 1. Cancelar procesos colgados
+pkill -f "tailscale up" 2>/dev/null
+
+# 2. Reiniciar el servicio
+sudo systemctl restart tailscaled
+sleep 5
+
+# 3. Verificar
+tailscale status
+
+# 4. Si sigue logged out, autenticar con auth key
+tailscale logout
+sudo tailscale up --authkey=tskey-auth-XXX --accept-dns=false
+```
+
+### Verificación
+
+```bash
+tailscale status
+# 100.x.y.z  <hostname>  user@  linux  -
+# 100.x.y.z  <otro>      user@  linux  active; direct <IP>:41641
+```
+
+### Lección
+
+El estado de Tailscale vive en `/var/lib/tailscale/tailscaled.state`.
+Si hay inconsistencias, un `systemctl restart tailscaled` suele arreglarlo.
+
+---
+
+## 14. Pérdida de DNS al cambiar adaptador en VirtualBox
+
+### Síntoma
+
+Tras cambiar el adaptador de red de una VM en VirtualBox
+(ej. de Host-Only a Adaptador Puente):
+
+- La VM **obtiene IP por DHCP** correctamente
+- **Pero la resolución DNS falla**
+- `ping 8.8.8.8` funciona
+- `dig google.com` falla con timeout
+
+### Causa
+
+Al cambiar el adaptador, NetworkManager o systemd-networkd reconfiguran la
+interfaz, pero:
+
+- El DNS del router no se propaga al stub de systemd-resolved
+- O Tailscale (si está instalado) sobrescribe el DNS con su propio upstream
+- Puede haber caché de conexiones antiguas
+
+### Solución
+
+```bash
+# 1. Ver el DNS actual de la interfaz
+resolvectl status | grep -A3 "Link"
+
+# 2. Ver si Tailscale está interfiriendo
+tailscale status
+
+# 3. Configurar DNS manual con NetworkManager
+nmcli connection show --active
+sudo nmcli connection modify <UUID> \
+  ipv4.dns "9.9.9.9,1.1.1.1,8.8.8.8" \
+  ipv4.ignore-auto-dns yes
+sudo nmcli connection down <UUID> && sudo nmcli connection up <UUID>
+
+# 4. Si Tailscale interfiere
+sudo tailscale set --accept-dns=false
+
+# 5. Verificar
+dig google.com +short
+```
+
+### Alternativa con netplan
+
+Si usas systemd-networkd en lugar de NetworkManager:
+
+```bash
+sudo nano /etc/netplan/01-netcfg.yaml
+```
+
+```yaml
+network:
+  version: 2
+  ethernets:
+    enp0s8:
+      dhcp4: true
+      dhcp4-overrides:
+        use-dns: false
+      nameservers:
+        addresses: [9.9.9.9, 1.1.1.1, 8.8.8.8]
+```
+
+```bash
+sudo chmod 600 /etc/netplan/*.yaml
+sudo netplan apply
+sudo systemctl restart systemd-resolved
+```
+
+### Verificación
+
+```bash
+resolvectl status | grep "Current DNS Server"
+dig google.com +short
+```
+
+### Lección
+
+- **Siempre** verificar DNS tras cambiar de red en una VM.
+- `resolvectl status` es el comando clave.
+- En Ubuntu Desktop, NetworkManager manda → usar `nmcli`.
+- En Ubuntu Server, systemd-networkd manda → usar `netplan`.
+- Si Tailscale está instalado, revisar `--accept-dns` inmediatamente.
 
 ## Comandos rápidos de referencia
 

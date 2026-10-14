@@ -50,3 +50,8 @@ venv/
 # --- Ansible ---
 *.retry
 ansible/vault-pass*
+
+# --- Documentación con datos reales (no subir) --
+*.local.nd
+docs/*.local.md
+docs/**/*.local.md

@@ -8,7 +8,7 @@
 
 Laboratorio SOC personal para practicar operativa Blue Team: despliegue de un
 SIEM (Wazuh) en local y un honeypot multi-servicio (TPOT) en una VPS pública,
-conectados por túnel WireGuard. Los ataques reales contra el honeypot se
+conectados por túnel Tailscale. Los ataques reales contra el honeypot se
 detectan, enriquecen y visualizan en tiempo real.
 
 > **Estado:** Fase 1 completada — Wazuh todo-en-uno desplegado y operativo.
@@ -18,7 +18,7 @@ detectan, enriquecen y visualizan en tiempo real.
 | Fase | Descripción | Estado |
 |---|---|---|
 | **1. Wazuh base** | SIEM desplegado en local + agente validado | ✅ Completada |
-| **2. Honeypot** | TPOT en VPS pública + túnel WireGuard | 🚧 En progreso |
+| **2. Honeypot** | TPOT en VPS pública + túnel Tailscale | 🚧 En progreso |
 | **3. Detección** | Reglas custom + mapeo MITRE ATT&CK | ⏳ Pendiente |
 | **4. Visualización** | Dashboards + Active Response | ⏳ Pendiente |
 
@@ -43,7 +43,7 @@ en Internet.
 
 - Despliega Wazuh todo-en-uno (Manager + Indexer + Dashboard) sobre Ubuntu 22.04 LTS.
 - Expone un honeypot TPOT en una VPS pública para recibir ataques reales de Internet.
-- Conecta ambos entornos mediante túnel WireGuard, sin exponer el SIEM.
+- Conecta ambos entornos mediante túnel Tailscale, sin exponer el SIEM.
 - Aplica reglas de detección mapeadas a MITRE ATT&CK.
 - Visualiza la actividad maliciosa en dashboards específicos.
 
@@ -81,12 +81,12 @@ en Internet.
 │  VPS pública             │         │  Ubuntu 22.04 (local)    │
 │                          │         │                          │
 │  ┌────────────────────┐  │         │  ┌────────────────────┐  │
-│  │  TPOT              │  │   WG    │  │  Wazuh Manager     │  │
+│  │  TPOT              │  │   TS    │  │  Wazuh Manager     │  │
 │  │  - Cowrie          │◄─┼─────────┼─►│  Wazuh Indexer     │  │
 │  │  - Dionaea         │  │         │  │  Wazuh Dashboard   │  │
 │  │  - Suricata        │  │         │  │  + Agente Wazuh    │  │
 │  └────────────────────┘  │         │  └────────────────────┘  │
-│  10.10.0.2 (WireGuard)   │         │  10.10.0.1 (WireGuard)   │
+│  10.10.0.2 (Tailscale)   │         │  10.10.0.1 (Tailscale)   │
 └──────────────────────────┘         └──────────────────────────┘
          ▲
          │  Ataques reales de Internet
@@ -121,6 +121,43 @@ sed -i 's/<dashboard-node-ip>/127.0.0.1/g' config.yml
 
 # 4. Instalación all-in-one
 sudo bash wazuh-install.sh -a
+soc@soc-VirtualBox:~/wazuh-tpot-soc$ echo "=== Git status ==="
+git status --short
+
+echo ""
+echo "=== ¿Qué dice el README de docs? ==="
+grep -A 8 "## 10. Documentación adicional" README.md
+
+echo ""
+echo "=== Fases del proyecto en README ==="
+grep -A 8 "## Fases del proyecto" README.md
+=== Git status ===
+M  .gitignore
+A  docs/06-vps-setup.md
+A  docs/adr/0002-tailscale-sobre-wireguard.md
+
+=== ¿Qué dice el README de docs? ===
+## 10. Documentación adicional
+
+- [Instalación detallada](docs/01-installation.md)
+- [Arquitectura](docs/02-architecture.md)
+- [Validación del agente](docs/03-agent-validation.md)
+- [Incidentes documentados](docs/04-incidents.md)
+- [Troubleshooting](docs/05-troubleshooting.md)
+- [Decisiones de diseño (ADR)](docs/adr/)
+---
+
+=== Fases del proyecto en README ===
+## Fases del proyecto
+
+| Fase | Descripción | Estado |
+|---|---|---|
+| **1. Wazuh base** | SIEM desplegado en local + agente validado | ✅ Completada |
+| **2. Honeypot** | TPOT en VPS pública + túnel Tailscale | 🚧 En progreso |
+| **3. Detección** | Reglas custom + mapeo MITRE ATT&CK | ⏳ Pendiente |
+| **4. Visualización** | Dashboards + Active Response | ⏳ Pendiente |
+
+soc@soc-VirtualBox:~/wazuh-tpot-soc$ 
 ```
 
 Duración estimada: 10-20 minutos.
@@ -206,7 +243,7 @@ Nunca ataques sistemas de terceros sin autorización por escrito.
 
 ### Fase 2 — Honeypot en VPS
 - [ ] Contratar VPS y desplegar TPOT
-- [ ] Configurar túnel WireGuard VPS ↔ local
+- [ ] Configurar túnel Tailscale VPS ↔ local
 - [ ] Conectar agente Wazuh de la VPS
 - [ ] Verificar llegada de eventos reales al SIEM
 
@@ -231,23 +268,28 @@ Nunca ataques sistemas de terceros sin autorización por escrito.
 - [Validación del agente](docs/03-agent-validation.md)
 - [Incidentes documentados](docs/04-incidents.md)
 - [Troubleshooting](docs/05-troubleshooting.md)
+- [Configuración de la VPS](docs/06-vps-setup.md)
 - [Decisiones de diseño (ADR)](docs/adr/)
 ---
 
 ## 11. Incidencias documentadas
 
-Durante la construcción del laboratorio han aparecido problemas reales que
-están documentados en [`docs/04-incidents.md`](docs/04-incidents.md):
+Durante la construcción del laboratorio han aparecido **8 problemas reales**
+documentados en [`docs/04-incidents.md`](docs/04-incidents.md):
 
-- **Incidente 1:** El paquete `wazuh-agent` destruye `wazuh-manager` al
-  instalarse en el mismo host. Lección: agente y manager siempre en
-  máquinas separadas.
-- **Incidente 2:** Tras recuperar el manager, el dashboard quedó roto con
-  errores `403` y `version_conflict`. Lección: revisar `wazuh.yml` y
-  resetear `.kibana_*` cuando cambian las credenciales.
-- **Incidente 3:** Manager no arranca por timeout de systemd
-- **Incidente 4:** Locks huérfanos en `/var/ossec/var/run/` tras timeout
-- **Incidente 5:** Indexer no arranca por timeout de systemd (mismo patrón)
+### Fase 1 — Wazuh base
+
+1. `wazuh-agent` destruye `wazuh-manager` en el mismo host
+2. Dashboard roto tras reinstall del manager (403 + `version_conflict`)
+3. Manager no arranca por timeout de systemd
+4. Locks huérfanos en `/var/ossec/var/run/` tras timeout
+5. Indexer no arranca por timeout de systemd (mismo patrón)
+
+### Fase 2 — VPS + Tailscale
+
+6. DNS roto tras cambiar adaptador de red en VirtualBox
+7. Tailscale: autenticación por URL no sincroniza
+8. Sesión de Tailscale caduca entre sesiones SSH
 
 ## Licencia
 
