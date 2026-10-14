@@ -61,7 +61,6 @@ cd ~
 curl -sO https://packages.wazuh.com/4.14/wazuh-install.sh
 curl -sO https://packages.wazuh.com/4.14/config.yml
 chmod +x wazuh-install.sh
-sudo bash wazuh-install.sh -a
 ```
 
 ### 5. Configuración del `config.yml`
