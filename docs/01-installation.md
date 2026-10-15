@@ -42,45 +42,35 @@ sysctl vm.max_map_count
 
 ### 3. Firewall
 
-```bash
-sudo ufw allow 22/tcp        # SSH
-sudo ufw allow 443/tcp       # Dashboard
-sudo ufw allow 1514/tcp      # Agentes (eventos)
-sudo ufw allow 1515/tcp      # Registro de agentes
-sudo ufw allow 55000/tcp     # API
-sudo ufw enable
-```
+UFW está habilitado, con política predeterminada de denegación de conexiones entrantes y permiso para conexiones salientes.
 
-Los puertos `9200` y `9300` del Indexer **no se exponen**. Solo escuchan en
-`127.0.0.1`.
+Reglas entrantes configuradas y verificadas:
+
+| Puerto | Servicio | Regla actual |
+|---|---|---|
+| 22/TCP | SSH | Permitido desde cualquier origen |
+| 443/TCP | Wazuh Dashboard | Permitido desde cualquier origen |
+| 1514/TCP | Comunicación con agentes | Permitido desde cualquier origen |
+| 1515/TCP | Registro de agentes | Permitido desde cualquier origen |
+| 55000/TCP | API de Wazuh | Permitido desde cualquier origen |
+
+Los puertos 9200/TCP y 9300/TCP del Wazuh Indexer no tienen reglas de entrada específicas en UFW y, según la comprobación realizada con `ss`, escuchan únicamente en la interfaz de loopback.
+
+Aunque UFW está activo, las reglas actuales permiten conexiones entrantes a los puertos indicados desde cualquier origen. Se debe restringir el acceso a los servicios de administración y limitar las conexiones de agentes a las redes autorizadas.
+
+La máquina dispone de una interfaz de red local y otra de Tailscale. La política definitiva de acceso debe tener en cuenta ambas interfaces y la conectividad con la VPS que aloja T-Pot.
 
 ### 4. Descarga del instalador
+
+Se descarga el asistente de instalación de la rama 4.14 de Wazuh. La versión instalada y verificada en este laboratorio es la 4.14.8.
 
 ```bash
 cd ~
 curl -sO https://packages.wazuh.com/4.14/wazuh-install.sh
-curl -sO https://packages.wazuh.com/4.14/config.yml
 chmod +x wazuh-install.sh
 ```
 
-### 5. Configuración del `config.yml`
-
-El fichero descargado contiene placeholders que hay que sustituir. Para una
-instalación en un solo nodo, se reemplazan por `127.0.0.1`:
-
-```bash
-sed -i 's/<indexer-node-ip>/127.0.0.1/g' config.yml
-sed -i 's/<wazuh-manager-ip>/127.0.0.1/g' config.yml
-sed -i 's/<dashboard-node-ip>/127.0.0.1/g' config.yml
-```
-
-Verificación (no debe quedar ningún `<...>`):
-
-```bash
-cat config.yml | grep -E "ip:"
-```
-
-### 6. Instalación all-in-one
+### 5. Instalación all-in-one
 
 ```bash
 sudo bash wazuh-install.sh -a
@@ -91,27 +81,39 @@ Duración estimada: 10-20 minutos.
 Al finalizar, el instalador muestra las credenciales y las guarda en
 `~/wazuh-install-files.tar`. Es importante conservarlas.
 
-### 7. Verificación
+### 6. Verificación
 
 ```bash
-# Servicios activos
+
+# Servicios centrales
 sudo systemctl is-active wazuh-indexer wazuh-manager wazuh-dashboard
 
-# Puertos escuchando
-sudo ss -tlnp | grep -E '443|1514|1515|55000|9200'
+# Puertos en escucha
+sudo ss -lntp | grep -E ':(443|1514|1515|55000|9200|9300)\b'
 
-# Estado del cluster
-curl -sk -u admin:TU_PASSWORD https://localhost:9200/_cluster/health?pretty
+# Parámetro del kernel
+sysctl vm.max_map_count
+
+# Respuesta del dashboard
+curl -sk -o /dev/null -w 'HTTP %{http_code}\n' https://127.0.0.1/
 ```
 
-Resultado esperado:
+## Resultado obtenido
 
-- Los 3 servicios `active`
-- Puertos 443, 1514, 1515, 55000, 9200 escuchando
-- Cluster en estado `green` o `yellow`
-- 11 shards activos
+Resultados observados durante la verificación del laboratorio:
 
-### 8. Acceso al dashboard
+- Versión de Wazuh: `4.14.8` en Manager, Indexer y Dashboard.
+- Estado del clúster: `green`.
+- Nodos: 1 nodo total y 1 nodo de datos.
+- Shards primarios activos: 28.
+- Shards activos: 28.
+- Shards sin asignar: 0.
+- Dashboard accesible y operativo; responde con HTTP `302` al acceder a la raíz.
+- Alertas iniciales observadas: 144 Medium y 89 Low, generadas por la monitorización interna del Manager, sin agentes conectados en ese momento.
+
+Estos valores corresponden a las comprobaciones realizadas en este laboratorio y pueden variar con la configuración y la actividad del entorno.
+
+### 7. Acceso al dashboard
 
 Desde el navegador de la VM:
 
