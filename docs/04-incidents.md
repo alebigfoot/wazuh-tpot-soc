@@ -6,6 +6,25 @@ feliz: demuestran criterio técnico y capacidad de diagnóstico.
 
 ---
 
+## Índice
+
+1. [Wazuh agent destruye Wazuh manager al instalarse en el mismo host](#incidente-1-wazuh-agent-destruye-wazuh-manager-al-instalarse-en-el-mismo-host)
+2. [Dashboard roto tras reinstalar el manager (403 + version_conflict)](#incidente-2-dashboard-roto-tras-reinstalar-el-manager-403--version_conflict)
+3. [Manager no arranca por timeout de systemd](#incidente-3-manager-no-arranca-por-timeout-de-systemd)
+4. [Locks huérfanos tras timeout](#incidente-4-locks-huérfanos-tras-timeout)
+5. [Indexer no arranca por timeout de systemd](#incidente-5-indexer-no-arranca-por-timeout-de-systemd)
+6. [DNS roto tras cambiar adaptador de red en VirtualBox](#incidente-6-dns-roto-tras-cambiar-adaptador-de-red-en-virtualbox)
+7. [Tailscale — autenticación por URL no sincroniza](#incidente-7-tailscale--autenticación-por-url-no-sincroniza)
+8. [Sesión de Tailscale caduca entre sesiones SSH](#incidente-8-sesión-de-tailscale-caduca-entre-sesiones-ssh)
+9. [T-Pot rechaza Ubuntu 24.04 — requiere 26.04](#incidente-9-t-pot-rechaza-ubuntu-2404--requiere-2604)
+10. [T-Pot no se puede instalar desde root](#incidente-10-t-pot-no-se-puede-instalar-desde-root)
+11. [Manager sin clave SSH — no se puede autenticar por clave](#incidente-11-manager-sin-clave-ssh--no-se-puede-autenticar-por-clave)
+12. [Agente en bucle "Never connected" por auto-enrollment](#incidente-12-agente-en-bucle-never-connected-por-auto-enrollment)
+13. [Error de `cowrie.json` — T-Pot no usa Cowrie en esta versión](#incidente-13-error-de-cowriejson--t-pot-no-usa-cowrie-en-esta-versión)
+14. [Mismatch de versión agente (4.14.9) vs manager (4.14.8)](#incidente-14-mismatch-de-versión-agente-4149-vs-manager-4148)
+
+---
+---
 ## Incidente 1: Wazuh agent destruye Wazuh manager al instalarse en el mismo host
 
 **Fecha:** 2026-10-08
