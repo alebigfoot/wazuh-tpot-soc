@@ -157,8 +157,8 @@ Tailscale.
 │  Ubuntu 24.04 LTS                       │  P2P    │  Ubuntu 22.04 LTS                       │
 │  4 vCPU · 8 GB RAM · 96 GB disco        │         │  8 vCPU · 8 GB RAM · 50 GB disco        │
 │                                         │         │                                         │
-│  [Pendiente] TPOT                       │         │  Wazuh Manager + Indexer + Dashboard    │
-│  [Pendiente] Agente Wazuh               │         │                                         │
+│              TPOT                       │         │  Wazuh Manager + Indexer + Dashboard    │
+│              Agente Wazuh               │         │                                         │
 └─────────────────────────────────────────┘         └─────────────────────────────────────────┘
 ```
 
