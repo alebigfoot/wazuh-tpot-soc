@@ -156,7 +156,25 @@ El agente `agent-test` aparece en estado `Active` en la vista de agentes.
 
 ![Security events](docs/diagrams/security-events.png)
 
-Vista de Discover filtrada por `agent.name: agent-test`, con 216 eventos en la consulta documentada. Estos eventos corresponden al agente de prueba y **no deben interpretarse como 216 ataques reales procedentes de T-Pot**.
+*Vista de Discover filtrada por `agent.name: agent-test`, con 216 eventos en la consulta documentada. Estos eventos corresponden al agente de prueba y no deben interpretarse como 216 ataques reales procedentes de T-Pot.*
+
+### Eventos de T-Pot en Wazuh — Ataques reales
+
+![T-Pot events](docs/diagrams/tpot-events.png)
+
+*Vista de Threat Hunting filtrada por `agent.name: vps-tpot`. Muestra 516 eventos reales capturados por T-Pot (Suricata, Dionaea, honeypots SSH/HTTP/RDP/SIP) en las últimas 24 horas.*
+
+### MITRE ATT&CK — Técnicas detectadas en T-Pot
+
+![T-Pot MITRE](docs/diagrams/tpot-mitre.png)
+
+*Técnicas MITRE ATT&CK mapeadas por las reglas de Wazuh aplicadas a los eventos reales de T-Pot: T1110 (Brute Force), T1046 (Network Service Scanning) y T1078 (Valid Accounts), entre otras.*
+
+### Agente `vps-tpot` conectado
+
+![T-Pot agent active](docs/diagrams/tpot-agent-active.png)
+
+*El agente `vps-tpot` (IP Tailscale `<IP_TAILSCALE>`) en estado Active en la vista de agentes del manager.*
 
 ---
 
@@ -250,6 +268,8 @@ Este laboratorio se utiliza para aprendizaje y observación de actividad dirigid
 - [Troubleshooting](docs/05-troubleshooting.md)
 - [Configuración de la VPS](docs/06-vps-setup.md)
 - [Instalación de T-Pot](docs/07-tpot-installation.md)
+- [Agente Wazuh en la VPS](docs/08-wazuh-agent-vps.md)
+- [Decisiones de diseño (ADR)](docs/adr/)
 - [Decisiones de diseño (ADR)](docs/adr/)
 
 ---
@@ -274,6 +294,9 @@ Durante el desarrollo del laboratorio se han registrado incidencias y tareas de 
 9. Problemas de compatibilidad de T-Pot con la versión de Ubuntu probada; consultar el informe de incidencia para conocer el entorno y el error exactos.
 10. Instalación de T-Pot rechazada al ejecutarse como `root`.
 11. Problemas de autenticación SSH por ausencia de una clave configurada en el manager.
+12. Agente en bucle `Never connected` por auto-enrollment
+13. Error de `cowrie.json` — T-Pot no usa Cowrie en esta versión
+14. Mismatch de versión agente (4.14.9) vs manager (4.14.8)
 
 Consulta el registro de incidencias para conocer el contexto, el diagnóstico y la resolución aplicada en cada caso.
 

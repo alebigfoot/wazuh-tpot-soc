@@ -717,6 +717,99 @@ ssh -i ~/.ssh/id_ed25519 tadmin@<VPS_IP> "hostname"
 
 ---
 
+## Incidente 12: Agente en bucle "Never connected" por auto-enrollment
+
+**Fecha:** 2026-10-19
+
+### Síntoma
+
+El agente aparecía como `Never connected` aunque:
+
+- Ping al manager funcionaba.
+- Puerto 1514 respondía (`nc -zv` succeeded).
+- La clave en `client.keys` era idéntica en ambos extremos.
+- El log del agente mostraba `Trying to connect` cada 60s.
+
+En el log del manager aparecía:
+
+```
+wazuh-authd: WARNING: Duplicate name 'vps-tpot', rejecting enrollment.
+```
+
+### Causa
+
+El agente tenía activado el auto-enrollment. Como ya existía un agente con el
+mismo nombre, el manager rechazaba el registro. Resultado: bucle infinito.
+
+### Solución aplicada
+
+1. Eliminar el agente del manager (`manage_agents` → R).
+2. Desactivar auto-enrollment en la VPS (`/var/ossec/etc/ossec.conf`).
+3. Borrar `client.keys` en la VPS.
+4. Re-registrar limpio en el manager y copiar nueva clave.
+5. Importar nueva clave en la VPS y arrancar.
+6. Verificar que aparece `Active`.
+
+### Lección
+
+Desactivar auto-enrollment al registrar agentes manualmente con clave pre-compartida.
+
+---
+
+## Incidente 13: Error de `cowrie.json` — T-Pot no usa Cowrie en esta versión
+
+**Fecha:** 2026-10-19
+
+### Síntoma
+
+```
+ERROR: (1103): Could not open file
+'/home/tadmin/tpotce/data/cowrie/log/cowrie.json'
+due to [(2)-(No such file or directory)].
+```
+
+### Causa
+
+T-Pot 24.04.1 no despliega Cowrie como contenedor independiente. Los honeypots
+SSH van dentro del contenedor `honeypots` y escriben en `ssh.log`.
+
+### Solución aplicada
+
+Eliminar el bloque `localfile` de `cowrie.json` y usar
+`honeypots/log/ssh.log` en su lugar.
+
+### Lección
+
+Verificar qué honeypots despliega cada versión de T-Pot antes de configurar
+`localfiles`.
+
+---
+
+## Incidente 14: Mismatch de versión agente (4.14.9) vs manager (4.14.8)
+
+**Fecha:** 2026-10-19
+
+### Síntoma
+
+El agente conectaba (visible en `tcpdump`) y enviaba el handshake, pero el
+manager cerraba la conexión sin responder. El log del agente mostraba
+`Version detected -> Wazuh v4.14.9`, mientras el manager estaba en `4.14.8`.
+
+### Causa
+
+Diferencia de versión entre agente y manager. El agente era más reciente que
+el manager, y el cambio de protocolo podía causar problemas de handshake.
+
+### Solución aplicada
+
+Actualizar el manager a la misma versión que el agente (`4.14.9`) o degradar
+el agente a `4.14.8`.
+
+### Lección
+
+Mantener agente y manager en la misma versión siempre que sea posible.
+
+
 ## Plantilla para próximos incidentes
 
 ```markdown
