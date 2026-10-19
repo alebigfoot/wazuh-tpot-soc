@@ -28,7 +28,7 @@ accede al dashboard únicamente desde la red local.
 │                          │         │                          │
 │  ┌────────────────────┐  │         │  ┌────────────────────┐  │
 │  │  TPOT              │  │         │  │  Wazuh Manager     │  │
-│  │  - Cowrie          │  │   WG    │  │  Wazuh Indexer     │  │
+│  │  - Cowrie          │  │   TS    │  │  Wazuh Indexer     │  │
 │  │  - Dionaea         │◄─┼─────────┼─►│  Wazuh Dashboard   │  │
 │  │  - Suricata        │  │         │  │  + Agente Wazuh    │  │
 │  │  - Honeytrap       │  │         │  └────────────────────┘  │
@@ -73,7 +73,7 @@ local sin exponer los puertos `1514`, `1515` ni `55000` a Internet.
 
 1. Un atacante contacta con un servicio del honeypot en la VPS.
 2. TPOT captura la interacción y genera un log JSON.
-3. El agente Wazuh de la VPS lee ese log y lo envía al manager por el túnel WG.
+3. El agente Wazuh de la VPS lee ese log y lo envía al manager por el túnel TS.
 4. El manager aplica decoders y reglas.
 5. Los eventos se indexan en Wazuh Indexer.
 6. El dashboard los muestra con dashboards específicos de TPOT.
@@ -84,11 +84,11 @@ local sin exponer los puertos `1514`, `1515` ni `55000` a Internet.
   un solo nodo simplifica la operación y es suficiente. Ver ADR 0001.
 - **TPOT en VPS pública:** el honeypot necesita exponerse a Internet para
   recibir tráfico real; hacerlo en la red doméstica sería inseguro.
-- **WireGuard en lugar de abrir puertos:** mantiene el manager inaccesible
+- **Tailscale en lugar de abrir puertos:** mantiene el manager inaccesible
   desde Internet y reduce la superficie de ataque.
 
 ## Referencias
 
 - [Documentación Wazuh](https://documentation.wazuh.com/)
 - [TPOT en GitHub](https://github.com/telekom-security/tpotce)
-- [WireGuard](https://www.wireguard.com/)
+- [Tailscale](https://tailscale.com/)
