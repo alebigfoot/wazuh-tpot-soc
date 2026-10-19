@@ -1,7 +1,8 @@
 # Wazuh + T-Pot SOC Lab
 
 ![Fase 1](https://img.shields.io/badge/Fase%201-Completada-brightgreen)
-![Fase 2](https://img.shields.io/badge/Fase%202-En%20progreso-yellow)
+![Fase 2](https://img.shields.io/badge/Fase%201-Completada-brightgreen)
+![Fase 3](https://img.shields.io/badge/Fase%202-En%20progreso-yellow)
 ![Wazuh](https://img.shields.io/badge/Wazuh-4.14.8-blue)
 ![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%20%7C%2026.04-orange)
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-lightgrey)
