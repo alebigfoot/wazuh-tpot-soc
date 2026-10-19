@@ -16,7 +16,7 @@ se desplegará TPOT (honeypot) en la Fase 2.
 | Recurso | Valor |
 |---|---|
 | Hostname | `<VPS_HOSTNAME>` |
-| SO | Ubuntu 24.04.5 LTS |
+| SO | Ubuntu 26.04 LTS (tras upgrade desde 24.04 por requisito de T-Pot) |
 | Kernel | 6.8.0-147-generic |
 | CPU | 4 vCPU |
 | RAM | 7.8 GB |
@@ -148,46 +148,72 @@ Tailscale.
 ## Arquitectura actual
 
 ```
-┌─────────────────────────────────────────┐         ┌─────────────────────────────────────────┐
-│  VPS Contabo                            │         │  Manager local                          │
-│                                         │         │                                         │
-│  IP pública: <VPS_IP>                   │         │  LAN: <LAN_IP>                          │
-│  Tailscale:  <TAILSCALE_IP_VPS>         │◄────────┼─►Tailscale: <TAILSCALE_IP_MGR>          │
-│                                         │  Direct │                                         │
-│  Ubuntu 24.04 LTS                       │  P2P    │  Ubuntu 22.04 LTS                       │
-│  4 vCPU · 8 GB RAM · 96 GB disco        │         │  8 vCPU · 8 GB RAM · 50 GB disco        │
-│                                         │         │                                         │
-│              TPOT                       │         │  Wazuh Manager + Indexer + Dashboard    │
-│              Agente Wazuh               │         │                                         │
-└─────────────────────────────────────────┘         └─────────────────────────────────────────┘
+┌────────────────────────────────────────────┐         ┌────────────────────────────────────────────┐
+│  VPS Contabo                               │         │  Manager local (VirtualBox)                │
+│                                            │         │                                            │
+│  IP pública: <VPS_IP>                      │         │  LAN: <LAN_IP>                             │
+│  Tailscale:  <TAILSCALE_IP_VPS>            │◄────────┼─►Tailscale: <TAILSCALE_IP_MGR>             │
+│                                            │  Direct │                                            │
+│  Ubuntu 26.04 LTS                          │  P2P    │  Ubuntu 22.04 LTS                          │
+│  4 vCPU · 8 GB RAM · 96 GB disco           │ cifrado │  8 vCPU · 8 GB RAM · 50 GB disco           │
+│                                            │         │                                            │
+│  ┌──────────────────────────────────────┐  │         │  ┌──────────────────────────────────────┐  │
+│  │  T-Pot 24.04.1 (23 contenedores)     │  │         │  │  Wazuh Manager + Indexer             │  │
+│  │  - Honeypots (SSH/HTTP/RDP/SIP)      │  │         │  │  Wazuh Dashboard                     │  │
+│  │  - Dionaea (SMB/FTP/MSSQL)           │  │         │  │  Agente de prueba (agent-test)       │  │
+│  │  - Suricata (IDS)                    │  │         │  └──────────────────────────────────────┘  │
+│  │  - Conpot (SCADA/ICS)                │  │         │                                            │
+│  │  - Dicompot, Medpot, otros...        │  │         │                                            │
+│  └──────────────────────────────────────┘  │         │                                            │
+│                                            │         │                                            │
+│  ┌──────────────────────────────────────┐  │         │                                            │
+│  │  Wazuh Agent (vps-tpot)              │  │         │                                            │
+│  │  Estado: Active                      │  │         │                                            │
+│  │  localfiles: logs de T-Pot           │  │         │                                            │
+│  └──────────────────────────────────────┘  │         │                                            │
+└────────────────────────────────────────────┘         └────────────────────────────────────────────┘
 ```
+
+
+La Fase 2 está completada. El pipeline funciona end-to-end:
+`Internet → T-Pot → wazuh-agent → Tailscale → Wazuh Manager → Dashboard`
+```
+
+---
 
 ## Estado de la VPS
 
 | Componente | Estado |
 |---|---|
-| SSH (puerto 22, root) | ✅ Funcional |
+| SO | ✅ Ubuntu 26.04 LTS |
+| SSH (puerto 64295, usuario tadmin) | ✅ Configurado por T-Pot |
 | Swap | ✅ 4 GB activo |
-| Actualización | ✅ Al día |
 | Tailscale | ✅ Autenticado y conectado |
-| UFW | ❌ Pendiente |
-| fail2ban | ⚠️ Instalado pero sin configurar |
-| Docker | ❌ Pendiente |
-| TPOT | ❌ Pendiente |
-| Agente Wazuh | ❌ Pendiente |
+| Docker | ✅ Instalado por T-Pot |
+| **T-Pot 24.04.1** | ✅ **23 contenedores activos** |
+| **Agente Wazuh (`vps-tpot`)** | ✅ **Active, enviando eventos** |
+| UFW | ✅ Configurado por T-Pot |
+| fail2ban | ✅ Activo contra honeypots |
 
 ## Próximos pasos
 
-1. Endurecer SSH (usuario no-root, deshabilitar password auth)
-2. Configurar UFW (permitir solo lo necesario)
-3. Configurar fail2ban
-4. Instalar Docker
-5. Instalar TPOT
-6. Instalar agente Wazuh
-7. Verificar llegada de eventos al manager
+La VPS está completamente operativa. Las tareas restantes pertenecen a fases
+posteriores:
+
+- **Fase 3:** crear reglas de detección específicas para los ataques capturados
+  por T-Pot (SSH, RDP, SIP, HTTP) y mapeo a MITRE ATT&CK.
+- **Fase 4:** dashboards personalizados y Active Response.
+
+## Documentación relacionada
+
+- [Instalación de T-Pot](07-tpot-installation.md)
+- [Agente Wazuh en la VPS](08-wazuh-agent-vps.md)
+- [ADR 0002 — Tailscale](adr/0002-tailscale-sobre-wireguard.md)
+- [Incidentes documentados](04-incidents.md)
 
 ## Referencias
 
 - [Contabo Cloud VPS](https://contabo.com/en/vps/)
 - [Tailscale](https://tailscale.com/)
-- [TPOT](https://github.com/telekom-security/tpotce)
+- [T-Pot](https://github.com/telekom-security/tpotce)
+- [Wazuh](https://wazuh.com/)
