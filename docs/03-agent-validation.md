@@ -127,18 +127,20 @@ filtrados por `agent.name: "agent-test"`.*
 
 El pipeline funciona correctamente:
 
-- El agente se registra y aparece como **Active** en el manager
-- Los eventos llegan al manager a través del puerto 1514
-- El dashboard muestra los eventos en tiempo real
-- Se han capturado **216 eventos** generados por el agente
+- El agente se registra y aparece como **Active** en el manager.
+- Los eventos llegan al manager a través del puerto 1514.
+- El dashboard muestra los eventos en tiempo real.
+- Se han capturado **216 eventos** generados por el agente.
 
-**La Fase 2 (TPOT en VPS) puede proceder con garantías.**
+**Fase 1 completada.** La Fase 2 (T-Pot en VPS) está documentada en
+[`07-tpot-installation.md`](07-tpot-installation.md) y
+[`08-wazuh-agent-vps.md`](08-wazuh-agent-vps.md).
 
 ## Lección aprendida
 
 Aplicando la lección del Incidente 1, el agente se ha desplegado en una
 VM separada del manager. Esto:
 
-- Evita el conflicto de binarios
-- Refleja la arquitectura real de producción
-- Prepara el despliegue del agente en la VPS de la Fase 2
+- Evita el conflicto de binarios.
+- Refleja la arquitectura real de producción.
+- Prepara el despliegue del agente en la VPS de la Fase 2.
