@@ -1,8 +1,8 @@
 # Wazuh + T-Pot SOC Lab
 
 ![Fase 1](https://img.shields.io/badge/Fase%201-Completada-brightgreen)
-![Fase 2](https://img.shields.io/badge/Fase%201-Completada-brightgreen)
-![Fase 3](https://img.shields.io/badge/Fase%202-En%20progreso-yellow)
+![Fase 2](https://img.shields.io/badge/Fase%202-Completada-brightgreen)
+![Fase 3](https://img.shields.io/badge/Fase%203-En%20progreso-yellow)
 ![Wazuh](https://img.shields.io/badge/Wazuh-4.14.8-blue)
 ![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%20%7C%2026.04-orange)
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-lightgrey)
@@ -19,7 +19,7 @@ El proyecto combina **Wazuh SIEM/XDR**, desplegado en una máquina virtual local
 | Fase | Descripción | Estado |
 |---|---|---|
 | **1. Wazuh base** | SIEM desplegado en local y agente de prueba validado | ✅ Completada |
-| **2. Honeypot** | T-Pot en VPS pública y conectividad mediante Tailscale | 🚧 En progreso |
+| **2. Honeypot** | T-Pot en VPS pública y conectividad mediante Tailscale | ✅ Completada |
 | **3. Detección** | Reglas personalizadas y mapeo MITRE ATT&CK | ⏳ Pendiente |
 | **4. Visualización y respuesta** | Dashboards, enriquecimiento y Active Response | ⏳ Pendiente |
 
