@@ -27,7 +27,9 @@ Wazuh. Cada sección incluye: síntoma, diagnóstico y solución.
 15. [T-Pot rechaza la versión del sistema](#15-t-pot-rechaza-la-versión-del-sistema)
 16. [T-Pot no se ejecuta como root](#16-t-pot-no-se-ejecuta-como-root)
 17. [Contenedores de T-Pot no arrancan](#17-contenedores-de-t-pot-no-arrancan)
-
+18. [Agente en bucle "Never connected" por auto-enrollment](#18-agente-en-bucle-never-connected-por-auto-enrollment)
+19. [Error de `cowrie.json` en el agente](#19-error-de-cowriejson-en-el-agente)
+20. [Mismatch de versión agente/manager](#20-mismatch-de-versión-agentemanager)
 ---
 
 ## 1. El manager no arranca
@@ -230,7 +232,7 @@ sudo chown wazuh-dashboard:wazuh-dashboard \
 sudo chmod 600 /usr/share/wazuh-dashboard/data/wazuh/config/wazuh.yml
 ```
 
-Reiniciar el dashboard:
+Reiniciar el dashboard
 
 ```bash
 sudo systemctl restart wazuh-dashboard
@@ -1032,6 +1034,226 @@ sudo docker inspect <nombre> | jq '.[0].State'
 
 ---
 
+## 18. Agente en bucle "Never connected" por auto-enrollment
+
+### Síntoma
+
+En el manager:
+
+```
+ID: 003, Name: vps-tpot, IP: 100.112.220.3, Never connected
+```
+
+Y en el log del manager:
+
+```
+wazuh-authd: WARNING: Duplicate name 'vps-tpot', rejecting enrollment.
+```
+
+El agente está conectando cada 60s pero el manager lo rechaza una y otra vez.
+
+### Causa
+
+El agente tiene activado el **auto-enrollment**. Cuando la conexión inicial
+falla (o se corta), el agente intenta registrarse de nuevo. Como ya existe
+un agente con el mismo nombre, el manager rechaza el registro. Resultado:
+bucle infinito.
+
+### Diagnóstico
+
+```bash
+# En el manager — ¿hay duplicados?
+sudo /var/ossec/bin/manage_agents -l
+
+# En el manager — ¿qué dice el log?
+sudo grep "Duplicate name" /var/ossec/logs/ossec.log | tail -5
+
+# En el agente — ¿tiene clave?
+sudo cat /var/ossec/etc/client.keys
+```
+
+### Solución
+
+1. Eliminar el agente del manager (`manage_agents` → R).
+2. Desactivar auto-enrollment en la VPS (`/var/ossec/etc/ossec.conf`):
+
+```xml
+<enrollment>
+  <enabled>no</enabled>
+</enrollment>
+```
+
+3. Borrar `client.keys` en la VPS:
+
+```bash
+sudo systemctl stop wazuh-agent
+sudo rm -f /var/ossec/etc/client.keys
+```
+
+4. Re-registrar limpio en el manager:
+
+```bash
+sudo /var/ossec/bin/manage_agents
+# A → vps-tpot → <VPS_IP> → y
+# E → ID → COPIAR CLAVE
+# Q
+```
+
+5. Importar la nueva clave en la VPS:
+
+```bash
+sudo /var/ossec/bin/manage_agents -i <NUEVA_CLAVE>
+sudo systemctl start wazuh-agent
+```
+
+6. Verificar:
+
+```bash
+sudo /var/ossec/bin/agent_control -l
+# ID: 003, Name: vps-tpot, IP: 100.112.220.3, Active
+```
+
+### Lección
+
+Desactivar auto-enrollment al registrar agentes manualmente con clave
+pre-compartida. Ver [Incidente 12](04-incidents.md#incidente-12-agente-en-bucle-never-connected-por-auto-enrollment).
+
+---
+
+## 19. Error de `cowrie.json` en el agente
+
+### Síntoma
+
+En el log del agente:
+
+```
+ERROR: (1103): Could not open file
+'/home/tadmin/tpotce/data/cowrie/log/cowrie.json'
+due to [(2)-(No such file or directory)].
+```
+
+### Causa
+
+T-Pot 24.04.1 **no despliega Cowrie como contenedor independiente**. Los
+honeypots SSH están dentro del contenedor `honeypots` y escriben en
+`honeypots/log/ssh.log`, no en `cowrie.json`.
+
+### Solución
+
+1. Verificar qué logs de T-Pot existen realmente:
+
+```bash
+# En la VPS
+sudo find /home/tadmin/tpotce/data -name "*.json" -o -name "*.log" 2>/dev/null | head -20
+```
+
+2. Eliminar el bloque `localfile` de `cowrie.json` de `/var/ossec/etc/ossec.conf`:
+
+```xml
+<!-- ELIMINAR este bloque -->
+<localfile>
+  <log_format>json</log_format>
+  <location>/home/tadmin/tpotce/data/cowrie/log/cowrie.json</location>
+</localfile>
+```
+
+3. Sustituirlo por el log correcto:
+
+```xml
+<localfile>
+  <log_format>syslog</log_format>
+  <location>/home/tadmin/tpotce/data/honeypots/log/ssh.log</location>
+</localfile>
+```
+
+4. Reiniciar el agente:
+
+```bash
+sudo systemctl restart wazuh-agent
+```
+
+5. Verificar que no hay errores:
+
+```bash
+sudo tail -20 /var/ossec/logs/ossec.log | grep -iE "error|analyzing"
+```
+
+### Lección
+
+Verificar qué honeypots despliega cada versión de T-Pot antes de configurar
+`localfiles`. Ver [Incidente 13](04-incidents.md#incidente-13-error-de-cowriejson--t-pot-no-usa-cowrie-en-esta-versión).
+
+---
+
+## 20. Mismatch de versión agente/manager
+
+### Síntoma
+
+El agente conecta (visible en `tcpdump`) y envía el handshake, pero el
+manager cierra la conexión sin responder. En el log del agente:
+
+```
+Version detected -> ... Wazuh v4.14.9
+```
+
+Y en el manager:
+
+```bash
+dpkg -l | grep wazuh-manager
+# wazuh-manager  4.14.8-1
+```
+
+### Causa
+
+Diferencia de versión entre agente y manager. El agente es más reciente
+que el manager, y el cambio de protocolo puede causar problemas de
+handshake.
+
+### Diagnóstico
+
+```bash
+# Versión del manager
+dpkg -l | grep -E "wazuh-(manager|indexer|dashboard)" | awk '{print $2, $3}'
+
+# Versión del agente (en la VPS)
+dpkg -l | grep wazuh-agent | awk '{print $2, $3}'
+
+# Versión reportada por el agente
+sudo /var/ossec/bin/wazuh-control info | grep VERSION
+```
+
+### Solución
+
+**Opción A — Actualizar el manager:**
+
+```bash
+# En el manager
+sudo apt update
+sudo apt upgrade wazuh-manager wazuh-indexer wazuh-dashboard -y
+sudo systemctl restart wazuh-indexer wazuh-manager wazuh-dashboard
+```
+
+**Opción B — Degradar el agente:**
+
+```bash
+# En la VPS
+sudo apt install --allow-downgrades wazuh-agent=4.14.8-1 -y
+sudo systemctl restart wazuh-agent
+```
+
+### Verificación
+
+```bash
+# Ambos deben mostrar la misma versión
+dpkg -l | grep wazuh
+```
+
+### Lección
+
+Mantener agente y manager en la misma versión siempre que sea posible.
+Ver [Incidente 14](04-incidents.md#incidente-14-mismatch-de-versión-agente-4149-vs-manager-4148).
+
+
 ## Comandos rápidos de referencia
 
 | Quiero... | Comando |
@@ -1051,5 +1273,10 @@ sudo docker inspect <nombre> | jq '.[0].State'
 ## Referencias
 
 - [Documentación oficial Wazuh](https://documentation.wazuh.com/)
+- [Documentación oficial T-Pot](https://github.com/telekom-security/tpotce)
+- [Tailscale](https://tailscale.com/)
 - [Incidentes documentados](04-incidents.md)
 - [Validación del agente](03-agent-validation.md)
+- [Configuración de la VPS](06-vps-setup.md)
+- [Instalación de T-Pot](07-tpot-installation.md)
+- [Agente Wazuh en la VPS](08-wazuh-agent-vps.md)
