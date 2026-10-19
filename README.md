@@ -127,7 +127,7 @@ Desde el navegador de la máquina virtual, si el servicio está escuchando en la
 https://127.0.0.1
 ```
 
-Las credenciales iniciales se generan durante la instalación. Guarda el archivo de credenciales de forma segura y **no lo subas al repositorio**.
+Las credenciales iniciales se generan durante la instalación. Guarda el archivo de credenciales de forma segura.
 
 ### Comprobar el estado de los servicios
 
