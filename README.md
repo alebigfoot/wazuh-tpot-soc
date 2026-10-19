@@ -239,9 +239,9 @@ Este laboratorio se utiliza para aprendizaje y observación de actividad dirigid
 - [x] Verificar la conectividad y los puertos necesarios a través del túnel.
 - [x] Instalar T-Pot (perfil mini) en la VPS.
 - [x] Verificar el arranque de los contenedores de honeypots.
-- [ ] Instalar el agente Wazuh en la VPS.
-- [ ] Configurar la recogida de logs de T-Pot mediante `localfile` u otro mecanismo compatible con la fuente de logs.
-- [ ] Validar la llegada de eventos de T-Pot al dashboard de Wazuh.
+- [x] Instalar el agente Wazuh en la VPS.
+- [x] Configurar la recogida de logs de T-Pot mediante `localfile` u otro mecanismo compatible con la fuente de logs.
+- [x] Validar la llegada de eventos de T-Pot al dashboard de Wazuh.
 
 ### Fase 3 — Detección
 
