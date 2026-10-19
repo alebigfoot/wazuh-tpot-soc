@@ -59,16 +59,6 @@ accede al dashboard únicamente desde la red local.
 | Suricata | IDS/IPS (no honeypot) | — |
 | Honeytrap | Genérico | varios |
 
-### Túnel WireGuard
-
-| Extremo | IP túnel | Rol |
-|---|---|---|
-| Ubuntu local | 10.10.0.1 | Servidor WG |
-| VPS | 10.10.0.2 | Cliente WG |
-
-El túnel permite que el agente Wazuh de la VPS envíe eventos al manager
-local sin exponer los puertos `1514`, `1515` ni `55000` a Internet.
-
 ## Flujo de datos
 
 1. Un atacante contacta con un servicio del honeypot en la VPS.
