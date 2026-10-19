@@ -12,7 +12,7 @@ Laboratorio personal de **Blue Team** orientado a practicar la monitorización d
 
 El proyecto combina **Wazuh SIEM/XDR**, desplegado en una máquina virtual local, con **T-Pot**, un honeypot multiservicio alojado en una VPS pública. Ambos entornos cuentan con conectividad mediante una red privada Tailscale. El laboratorio se desarrolla por fases: despliegue de infraestructura, integración de telemetría, creación de reglas de detección, mapeo a **MITRE ATT&CK** y visualización de resultados.
 
-> **Estado actual:** Wazuh está desplegado y validado en local. T-Pot está instalado en la VPS y conectado al manager a través de Tailscale. El agente Wazuh de la VPS (`vps-tpot`) está activo y los eventos de T-Pot (Suricata, Dionaea, honeypots) llegan correctamente al dashboard. La Fase 2 está completada.
+> **Estado actual:** Wazuh está desplegado y validado en local. T-Pot está instalado en la VPS y conectado al manager a través de Tailscale. El agente Wazuh de la VPS (`vps-tpot`) está activo y los eventos de T-Pot (Suricata, Dionaea, honeypots) llegan correctamente al dashboard. **La Fase 2 está completada.**
 
 ## Fases del proyecto
 
