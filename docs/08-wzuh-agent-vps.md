@@ -4,8 +4,8 @@ Documentación del despliegue del agente Wazuh en la VPS de Contabo (donde corre
 
 ## Contexto
 
-- **Manager Wazuh:** VM local (`soc-VirtualBox`), IP Tailscale `100.108.83.63`.
-- **Agente Wazuh:** VPS Contabo (`vmi3664658`), IP Tailscale `100.112.220.3`.
+- **Manager Wazuh:** VM local (`soc-VirtualBox`), IP Tailscale `<IP_TAILSCALE>`.
+- **Agente Wazuh:** VPS Contabo (`vmi3664658`), IP Tailscale `<IP_TAILSCALE>`.
 - **Honeypots:** T-Pot (23 contenedores activos), logs en `/home/tadmin/tpotce/data/`.
 - **Túnel:** Tailscale P2P directo (sin relay DERP).
 
@@ -26,12 +26,12 @@ sudo /var/ossec/bin/manage_agents
 ```
 
 ```
-A → Name: vps-tpot → IP: 100.112.220.3 → y
+A → Name: vps-tpot → IP: <IP_TAILSCALE> → y
 E → ID: 003 → COPIAR CLAVE
 Q
 ```
 
-> **Nota:** el agente debe registrarse con su IP Tailscale (`100.112.220.3`), no con su IP pública.
+> **Nota:** el agente debe registrarse con su IP Tailscale (`<IP_TAILSCALE>`), no con su IP pública.
 
 ### 2. Instalar el agente en la VPS
 
@@ -46,7 +46,7 @@ echo "deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4
 
 sudo apt update
 
-sudo WAZUH_MANAGER='100.108.83.63' \
+sudo WAZUH_MANAGER='<IP_WAZUH>' \
      WAZUH_AGENT_NAME='vps-tpot' \
      apt install -y wazuh-agent
 ```
@@ -117,7 +117,7 @@ Esperado:
 
 ```
 ID: 000, Name: soc-VirtualBox (server), IP: 127.0.0.1, Active/Local
-ID: 003, Name: vps-tpot, IP: 100.112.220.3, Active
+ID: 003, Name: vps-tpot, IP: <IP_TAILSCALE>, Active
 ```
 
 ## Evidencia
