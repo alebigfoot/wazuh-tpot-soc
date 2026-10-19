@@ -178,13 +178,13 @@ El agente `agent-test` aparece en estado `Active` en la vista de agentes.
 
 ![T-Pot MITRE](docs/diagrams/tpot-mitre.png)
 
-*Técnicas MITRE ATT&CK mapeadas por las reglas de Wazuh aplicadas a los eventos reales de T-Pot: T1110 (Brute Force), T1046 (Network Service Scanning) y T1078 (Valid Accounts), entre otras.*
+*Técnicas MITRE ATT&CK mapeadas por las reglas de Wazuh aplicadas a los eventos reales de T-Pot: T1046 (Network Service Scanning) y T1078 (Valid Accounts), entre otras.*
 
 ### Agente `vps-tpot` conectado
 
 ![T-Pot agent active](docs/diagrams/tpot-agent-active.png)
 
-*El agente `vps-tpot` (IP Tailscale `<IP_TAILSCALE>`) en estado Active en la vista de agentes del manager.*
+*El agente `vps-tpot`  en estado Active en la vista de agentes del manager.*
 
 ---
 
