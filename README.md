@@ -12,7 +12,7 @@ Laboratorio personal de **Blue Team** orientado a practicar la monitorización d
 
 El proyecto combina **Wazuh SIEM/XDR**, desplegado en una máquina virtual local, con **T-Pot**, un honeypot multiservicio alojado en una VPS pública. Ambos entornos cuentan con conectividad mediante una red privada Tailscale. El laboratorio se desarrolla por fases: despliegue de infraestructura, integración de telemetría, creación de reglas de detección, mapeo a **MITRE ATT&CK** y visualización de resultados.
 
-> **Estado actual:** Wazuh está desplegado y validado en local; T-Pot está instalado en la VPS y la conectividad mediante Tailscale está configurada. La integración de los logs de T-Pot con Wazuh y la validación de eventos reales en el dashboard siguen pendientes.
+> **Estado actual:** Wazuh está desplegado y validado en local. T-Pot está instalado en la VPS y conectado al manager a través de Tailscale. El agente Wazuh de la VPS (`vps-tpot`) está activo y los eventos de T-Pot (Suricata, Dionaea, honeypots) llegan correctamente al dashboard. La Fase 2 está completada.
 
 ## Fases del proyecto
 
@@ -43,48 +43,57 @@ El proyecto combina **Wazuh SIEM/XDR**, desplegado en una máquina virtual local
 
 ---
 
-## 2. Arquitectura
-
 ### Estado actual
 
-```text
-        Internet
-   (bots y escáneres)
-            |
-            v
-+-----------------------------------+
-| VPS pública                       |
-| Ubuntu 26.04 LTS                  |
-|                                   |
-| T-Pot (perfil mini)               |
-| - Cowrie                          |
-| - Dionaea                         |
-| - Suricata                        |
-| - Otros honeypots                 |
-+-----------------------------------+
-            |
-            | Red privada Tailscale
-            | Conectividad configurada
-            |
-            v
-+-----------------------------------+
-| Laboratorio local (VirtualBox)    |
-| Ubuntu 22.04 LTS                  |
-|                                   |
-| Wazuh Manager                     |
-| Wazuh Indexer                     |
-| Wazuh Dashboard                   |
-|                                   |
-| Agente local de prueba validado   |
-+-----------------------------------+
-
-Integración de los logs de T-Pot con Wazuh:
-pendiente de completar y validar.
+```
+            Internet
+       (bots y escáneres)
+                |
+                v
+    +-----------------------------------+
+    | VPS pública                       |
+    | Ubuntu 26.04 LTS                  |
+    |                                   |
+    | T-Pot (perfil mini)               |
+    | - Honeypots (SSH, HTTP, RDP, SIP) |
+    | - Dionaea (SMB, FTP, MSSQL)       |
+    | - Suricata (IDS)                  |
+    | - Conpot (SCADA/ICS)              |
+    | - Dicompot, Medpot, otros...      |
+    |                                   |
+    | Wazuh Agent (vps-tpot)            |
+    | - localfiles: logs de T-Pot       |
+    +-----------------------------------+
+                |
+                | Túnel Tailscale (P2P directo, cifrado)
+                | Puerto 1514 (eventos Wazuh)
+                v
+    +-----------------------------------+
+    | Laboratorio local (VirtualBox)    |
+    | Ubuntu 22.04 LTS                  |
+    |                                   |
+    | Wazuh Manager                     |
+    | Wazuh Indexer                     |
+    | Wazuh Dashboard                   |
+    |                                   |
+    | Agente de prueba (agent-test)     |
+    +-----------------------------------+
 ```
 
-La conectividad Tailscale entre la VPS y el laboratorio está configurada. La instalación del agente Wazuh en la VPS, la configuración de la recogida de logs de T-Pot y la comprobación de su llegada al dashboard forman parte del trabajo pendiente de la fase 2.
+El pipeline está **completamente operativo**:
+
+```
+Internet → T-Pot (VPS) → wazuh-agent → Tailscale → Wazuh Manager → Indexer → Dashboard
+```
+
+Los eventos capturados por T-Pot (Suricata, Dionaea, honeypots SSH/HTTP/RDP/SIP) llegan al dashboard de Wazuh en tiempo real.
 
 > **Nota de seguridad:** las direcciones IP privadas de Tailscale, los puertos administrativos y otros detalles específicos de la infraestructura se omiten del diagrama público. La configuración real de red y firewall debe consultarse en la documentación operativa privada o en los archivos de configuración correspondientes.
+
+---
+
+## 2. Arquitectura
+
 
 ### Arquitectura objetivo
 
@@ -270,7 +279,6 @@ Este laboratorio se utiliza para aprendizaje y observación de actividad dirigid
 - [Configuración de la VPS](docs/06-vps-setup.md)
 - [Instalación de T-Pot](docs/07-tpot-installation.md)
 - [Agente Wazuh en la VPS](docs/08-wazuh-agent-vps.md)
-- [Decisiones de diseño (ADR)](docs/adr/)
 - [Decisiones de diseño (ADR)](docs/adr/)
 
 ---
