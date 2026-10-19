@@ -18,8 +18,8 @@ El proyecto combina **Wazuh SIEM/XDR**, desplegado en una máquina virtual local
 
 | Fase | Descripción | Estado |
 |---|---|---|
-| **1. Wazuh base** | SIEM desplegado en local y agente de prueba validado | ✅ Completada |
-| **2. Honeypot** | T-Pot en VPS pública y conectividad mediante Tailscale | ✅ Completada |
+| **1. Wazuh base** | SIEM desplegado en local y agente de prueba validado | ✅Completada |
+| **2. Honeypot** | T-Pot en VPS pública y conectividad mediante Tailscale | ✅Completada |
 | **3. Detección** | Reglas personalizadas y mapeo MITRE ATT&CK | ⏳ Pendiente |
 | **4. Visualización y respuesta** | Dashboards, enriquecimiento y Active Response | ⏳ Pendiente |
 
