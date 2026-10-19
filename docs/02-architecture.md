@@ -5,7 +5,7 @@
 ```
 ┌──────────────────────────────────────────────┐
 │  Ubuntu 22.04 LTS (VirtualBox, NAT)          │
-│  IP: 10.0.2.15                               │
+│                                              │
 │                                              │
 │  ┌────────────────────────────────────────┐  │
 │  │  Wazuh Manager      (1514, 1515, 55000)│  │
@@ -33,7 +33,7 @@ accede al dashboard únicamente desde la red local.
 │  │  - Suricata        │  │         │  │  + Agente Wazuh    │  │
 │  │  - Honeytrap       │  │         │  └────────────────────┘  │
 │  └────────────────────┘  │         │                          │
-│  10.10.0.2 (WireGuard)   │         │  10.10.0.1 (WireGuard)   │
+│                          │         |                          │
 └──────────────────────────┘         └──────────────────────────┘
          ▲
          │  Ataques reales de Internet
