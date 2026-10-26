@@ -30,6 +30,9 @@ Wazuh. Cada sección incluye: síntoma, diagnóstico y solución.
 18. [Agente en bucle "Never connected" por auto-enrollment](#18-agente-en-bucle-never-connected-por-auto-enrollment)
 19. [Error de `cowrie.json` en el agente](#19-error-de-cowriejson-en-el-agente)
 20. [Mismatch de versión agente/manager](#20-mismatch-de-versión-agentemanager)
+21. [Manager no arranca por `Field 'X' is static` en una regla](#21-manager-no-arranca-por-field-x-is-static-en-una-regla)
+22. [Reglas custom no disparan (falta `<if_sid>`)](#22-reglas-custom-no-disparan-falta-if_sid)
+
 ---
 
 ## 1. El manager no arranca
@@ -1253,6 +1256,208 @@ dpkg -l | grep wazuh
 Mantener agente y manager en la misma versión siempre que sea posible.
 Ver [Incidente 14](04-incidents.md#incidente-14-mismatch-de-versión-agente-4149-vs-manager-4148).
 
+---
+
+## 21. Manager no arranca por `Field 'X' is static` en una regla
+
+### Síntoma
+
+El manager no arranca después de añadir una regla custom:
+
+```
+wazuh-analysisd: ERROR: Failure to read rule 100014. Field 'protocol' is static.
+wazuh-analysisd: CRITICAL: (1220): Error loading the rules: 'etc/rules/local_rules.xml'.
+Failed to start wazuh-manager.service.
+```
+
+Y al comprobar el estado:
+
+```bash
+sudo systemctl status wazuh-manager
+Active: failed (Result: exit-code)
+```
+
+### Causa
+
+Algunos nombres de campo son **reservados** por el sistema de decodificación
+de Wazuh (`protocol`, `action`, `id`, `status`, `src_ip`, etc.). Si se usan
+directamente en `<field name="...">`, el manager falla al cargar la regla.
+
+Ejemplo que falla:
+
+```xml
+<field name="protocol">ssh</field>
+```
+
+### Solución
+
+1. **Identificar el campo problemático** en el log del manager:
+
+```bash
+sudo grep "Field" /var/ossec/logs/ossec.log | tail -5
+```
+
+2. **Cambiar el campo** a su versión con `data.` (si está dentro del JSON)
+   o renombrarlo:
+
+```xml
+<field name="data.protocol">ssh</field>
+```
+
+3. **Reiniciar el manager:**
+
+```bash
+sudo systemctl restart wazuh-manager
+sleep 60
+sudo systemctl is-active wazuh-manager
+```
+
+### Verificación
+
+```bash
+# El manager debe estar activo
+sudo systemctl is-active wazuh-manager
+
+# Y las reglas deben cargarse
+sudo grep "Total rules enabled" /var/ossec/logs/ossec.log | tail -1
+```
+
+### Lista de campos reservados más comunes
+
+| Campo reservado | Alternativa |
+|---|---|
+| `protocol` | `data.protocol` |
+| `action` | `data.action` |
+| `id` | `data.id` o `data.eventid` |
+| `status` | `data.status` |
+| `src_ip` | `data.src_ip` (si está en `data`) |
+
+### Lección
+
+Si una regla custom rompe el arranque del manager, **siempre** revisar el
+log del manager. El error `Field 'X' is static` es el indicador más claro.
+
+---
+
+## 22. Reglas custom no disparan (falta `<if_sid>`)
+
+### Síntoma
+
+Las reglas custom se cargan sin error (el contador de reglas aumenta), pero
+**no disparan** con los eventos reales.
+
+Al probar con `wazuh-logtest`:
+
+```bash
+sudo /var/ossec/bin/wazuh-logtest
+```
+
+Pegar un evento JSON que **debería** disparar la regla custom. El resultado:
+
+```
+**Phase 3: Completed filtering (rules).
+    id: '86600'                     ← regla por defecto
+    description: 'Suricata messages.'
+```
+
+En lugar de:
+
+```
+    id: '100010'                    ← nuestra regla custom
+    description: 'T-Pot/Suricata: SNMP scan desde...'
+```
+
+### Causa
+
+Wazuh evalúa las reglas **en orden jerárquico**. Las reglas del ruleset base
+(como `86600` para Suricata) tienen prioridad y **consumen el evento** antes
+de que llegue a las reglas custom.
+
+Sin `<if_sid>`, las reglas custom **nunca se evalúan** para eventos que ya
+coinciden con una regla base.
+
+### Diagnóstico
+
+1. **Verificar que la regla no dispara con `wazuh-logtest`:**
+
+```bash
+sudo /var/ossec/bin/wazuh-logtest
+# Pegar el JSON de prueba
+# Comprobar el `id` de la regla que dispara
+```
+
+Si dispara la `86600` (o cualquier regla base) en lugar de la custom, es
+este problema.
+
+2. **Verificar que las reglas están cargadas:**
+
+```bash
+sudo grep "Total rules enabled" /var/ossec/logs/ossec.log | tail -1
+```
+
+Si el número es mayor que el base (8451), las reglas están cargadas.
+
+### Solución
+
+Añadir `<if_sid>` con el ID de la regla base que procesa el evento:
+
+```xml
+<rule id="100010" level="7">
+  <if_sid>86600</if_sid>          <!-- ⬅️ AÑADIR ESTA LÍNEA -->
+  <field name="event_type">snmp</field>
+  <field name="snmp.community">public</field>
+  <description>T-Pot/Suricata: SNMP scan desde $(data.src_ip) con community public</description>
+  <mitre>
+    <id>T1046</id>
+  </mitre>
+</rule>
+```
+
+**¿Cómo saber qué `if_sid` usar?**
+
+Depende del decoder:
+
+| Fuente | Regla base | `if_sid` |
+|---|---|---|
+| Suricata | 86600 | `<if_sid>86600</if_sid>` |
+| JSON genérico | 1002 | `<if_sid>1002</if_sid>` |
+| Syslog | 1002 | `<if_sid>1002</if_sid>` |
+| SSH (sshd) | 5700 | `<if_sid>5700</if_sid>` |
+
+La forma más segura de saberlo:
+
+1. Ejecutar `wazuh-logtest` con el evento.
+2. Ver qué regla dispara (el `id`).
+3. Usar ese `id` como `<if_sid>` en la regla custom.
+
+### Verificación
+
+```bash
+sudo systemctl restart wazuh-manager
+sleep 60
+
+sudo /var/ossec/bin/wazuh-logtest
+# Pegar el JSON de prueba
+```
+
+Ahora debería salir:
+
+```
+**Phase 3: Completed filtering (rules).
+    id: '100010'
+    level: '7'
+    description: 'T-Pot/Suricata: SNMP scan desde...'
+    mitre.id: ['T1046']
+```
+
+### Lección
+
+**Cualquier regla custom que dependa de un decoder específico necesita
+`<if_sid>`.** Sin él, el evento se queda en la regla base y nunca llega a
+la custom.
+
+**Regla general:** si `wazuh-logtest` dispara una regla base en lugar de la
+custom, falta `if_sid`.
 
 ## Comandos rápidos de referencia
 
