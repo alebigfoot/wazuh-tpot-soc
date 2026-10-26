@@ -2,7 +2,8 @@
 
 ![Fase 1](https://img.shields.io/badge/Fase%201-Completada-brightgreen)
 ![Fase 2](https://img.shields.io/badge/Fase%202-Completada-brightgreen)
-![Fase 3](https://img.shields.io/badge/Fase%203-En%20progreso-yellow)
+![Fase 3](https://img.shields.io/badge/Fase%203-Completada-brightgreen)
+![Fase 4](https://img.shields.io/badge/Fase%204-En%20progreso-yellow)
 ![Wazuh](https://img.shields.io/badge/Wazuh-4.14.8-blue)
 ![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%20%7C%2026.04-orange)
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-lightgrey)
@@ -20,7 +21,7 @@ El proyecto combina **Wazuh SIEM/XDR**, desplegado en una máquina virtual local
 |---|---|---|
 | **1. Wazuh base** | SIEM desplegado en local y agente de prueba validado | ✅Completada |
 | **2. Honeypot** | T-Pot en VPS pública y conectividad mediante Tailscale | ✅Completada |
-| **3. Detección** | Reglas personalizadas y mapeo MITRE ATT&CK | ⏳ Pendiente |
+| **3. Detección** | Reglas personalizadas y mapeo MITRE ATT&CK | ✅Completada |
 | **4. Visualización y respuesta** | Dashboards, enriquecimiento y Active Response | ⏳ Pendiente |
 
 ---
@@ -190,15 +191,69 @@ El agente `agent-test` aparece en estado `Active` en la vista de agentes.
 
 ## 6. Testing
 
-Las pruebas automatizadas de las reglas personalizadas están pendientes de implementar.
+Las reglas custom se han validado con `wazuh-logtest` usando eventos JSON
+reales de T-Pot.
 
-Está previsto validar las reglas con eventos de ejemplo asociados a Cowrie, Dionaea y Suricata. Cada prueba deberá documentar:
+### Método de validación
 
-- El evento de entrada y su origen.
-- La regla que se espera que se active.
-- El resultado observado.
-- El nivel de alerta y los campos relevantes.
-- El mapeo a MITRE ATT&CK, cuando corresponda.
+```bash
+sudo /var/ossec/bin/wazuh-logtest
+```
+
+Pegar un evento JSON de ejemplo y comprobar la salida:
+
+- **Phase 2:** el evento se decodifica correctamente.
+- **Phase 3:** la regla correcta dispara (`id`, `level`, `description`).
+- **MITRE:** se muestra `mitre.id`, `mitre.tactic` y `mitre.technique`.
+
+### Eventos validados
+
+| Regla | Evento probado | Resultado |
+|---|---|---|
+| 100010 (SNMP scan) | JSON `event_type: snmp` | ✅ Dispara, MITRE T1046 |
+| 100011 (User-Agent) | JSON `event_type: http` con `Infrawatch` | ✅ Dispara, MITRE T1595 |
+| 100012 (RDP) | JSON `event_type: rdp` | ✅ Dispara, MITRE T1021.001 |
+
+### Ejemplo de validación
+
+```bash
+$ sudo /var/ossec/bin/wazuh-logtest
+Starting wazuh-logtest v4.14.9
+Type one log per line
+
+{"timestamp":"2026-10-26T12:58:01.913471+0000","flow_id":1447806394829753,
+"in_iface":"eth0","event_type":"snmp","src_ip":"141.153.237.4",
+"src_port":53,"dest_ip":"185.208.206.235","dest_port":161,"proto":"UDP",
+"snmp":{"version":2,"pdu_type":"get_bulk_request","community":"public"}}
+
+**Phase 3: Completed filtering (rules).
+	id: '100010'
+	level: '7'
+	description: 'T-Pot/Suricata: SNMP scan desde 141.153.237.4 con community public'
+	mitre.id: ['T1046']
+	mitre.tactic: ['Discovery']
+	mitre.technique: ['Network Service Discovery']
+**Alert to be generated.
+```
+
+### Alertas reales en el dashboard
+
+Las reglas también se han validado con tráfico real de Internet. El
+dashboard de Wazuh muestra **4.797 hits** en 24 horas filtrados por las
+reglas custom, con mapeo correcto a MITRE ATT&CK:
+
+- `T1021.001` (Lateral Movement) para conexiones RDP.
+- `T1046` (Discovery) para escaneos SNMP.
+
+Ver [sección 5 (Evidencias)](#5-evidencias) y
+[`docs/09-detection-rules.md`](docs/09-detection-rules.md) para más
+detalles.
+
+### Pruebas pendientes
+
+- Validar la regla de fuerza bruta SSH (`100013`) con eventos reales o simulados.
+- Añadir un script automatizado (`tests/test-rules.sh`) que ejecute
+  `wazuh-logtest` con eventos de ejemplo y valide la salida.
 
 ---
 
@@ -255,11 +310,11 @@ Este laboratorio se utiliza para aprendizaje y observación de actividad dirigid
 
 ### Fase 3 — Detección
 
-- [ ] Crear reglas de detección para Cowrie.
-- [ ] Crear reglas de detección para Dionaea.
-- [ ] Crear reglas de detección para Suricata.
-- [ ] Documentar las reglas y su mapeo a MITRE ATT&CK.
-- [ ] Añadir pruebas con eventos de ejemplo.
+- [x] Crear reglas de detección para Cowrie.
+- [x] Crear reglas de detección para Dionaea.
+- [x] Crear reglas de detección para Suricata.
+- [x] Documentar las reglas y su mapeo a MITRE ATT&CK.
+- [x] Añadir pruebas con eventos de ejemplo.
 
 ### Fase 4 — Visualización y respuesta
 
@@ -279,6 +334,7 @@ Este laboratorio se utiliza para aprendizaje y observación de actividad dirigid
 - [Configuración de la VPS](docs/06-vps-setup.md)
 - [Instalación de T-Pot](docs/07-tpot-installation.md)
 - [Agente Wazuh en la VPS](docs/08-wazuh-agent-vps.md)
+- [Reglas de detección custom](docs/09-detection-rules.md)
 - [Decisiones de diseño (ADR)](docs/adr/)
 
 ---
@@ -307,6 +363,15 @@ Durante el desarrollo del laboratorio se han registrado incidencias y tareas de 
 13. Error de `cowrie.json` — T-Pot no usa Cowrie en esta versión
 14. Mismatch de versión agente (4.14.9) vs manager (4.14.8)
 
+### Fase 3 — Reglas de detección
+
+15. Manager no arranca por `Field 'protocol' is static` en una regla custom.
+16. Reglas custom no disparan sin `<if_sid>` (el evento ya había sido consumido por la regla base de Suricata).
+
+Consulta el registro completo en [`docs/04-incidents.md`](docs/04-incidents.md)
+para conocer el contexto, el diagnóstico y la resolución aplicada en cada caso.
+
+---
 Consulta el registro de incidencias para conocer el contexto, el diagnóstico y la resolución aplicada en cada caso.
 
 ---

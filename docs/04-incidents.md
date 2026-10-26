@@ -828,6 +828,131 @@ el agente a `4.14.8`.
 
 Mantener agente y manager en la misma versión siempre que sea posible.
 
+---
+
+## Incidente 15: Manager no arranca por `Field 'protocol' is static`
+
+**Fecha:** 2026-10-26
+
+### Síntoma
+
+Tras crear una regla custom en `local_rules.xml`, el manager no arrancaba:
+
+```
+wazuh-analysisd: ERROR: Failure to read rule 100014. Field 'protocol' is static.
+wazuh-analysisd: CRITICAL: (1220): Error loading the rules: 'etc/rules/local_rules.xml'.
+Failed to start wazuh-manager.service.
+```
+
+### Causa
+
+En la regla custom se usaba el campo `protocol` directamente:
+
+```xml
+<field name="protocol">ssh</field>
+```
+
+Pero `protocol` es un campo **reservado** del sistema de decodificación de
+Wazuh. No se puede usar como nombre de campo en una regla.
+
+### Solución aplicada
+
+Usar `data.protocol` en lugar de `protocol`:
+
+```xml
+<field name="data.protocol">ssh</field>
+```
+
+Y reiniciar el manager:
+
+```bash
+sudo systemctl restart wazuh-manager
+```
+
+### Lección
+
+Algunos nombres de campo son reservados en Wazuh (`protocol`, `action`, `id`,
+`status`, etc.). Si una regla no carga con el error `Field 'X' is static`,
+usar `data.X` o renombrar el campo.
+
+---
+
+## Incidente 16: Reglas custom no disparan sin `<if_sid>`
+
+**Fecha:** 2026-10-26
+
+### Síntoma
+
+Las reglas custom se cargaban correctamente (el contador de reglas
+aumentaba) pero **no disparaban** con los eventos reales. Al probar con
+`wazuh-logtest`:
+
+```
+**Phase 3: Completed filtering (rules).
+    id: '86600'                    ← la regla por defecto de Suricata
+    description: 'Suricata messages.'
+```
+
+En lugar de:
+
+```
+    id: '100010'
+    description: 'T-Pot/Suricata: SNMP scan desde 141.153.237.4...'
+```
+
+### Causa
+
+Wazuh evalúa las reglas en orden jerárquico. Las reglas del ruleset base
+(como `86600` para Suricata) tienen prioridad y **consumen el evento**
+antes de que llegue a las reglas custom.
+
+Sin `<if_sid>`, las reglas custom nunca se evalúan para eventos que ya
+coinciden con una regla base.
+
+### Solución aplicada
+
+Añadir `<if_sid>` con el ID de la regla base que procesa el evento:
+
+```xml
+<rule id="100010" level="7">
+  <if_sid>86600</if_sid>
+  <field name="event_type">snmp</field>
+  <field name="snmp.community">public</field>
+  <description>T-Pot/Suricata: SNMP scan desde $(data.src_ip) con community public</description>
+  <mitre>
+    <id>T1046</id>
+  </mitre>
+</rule>
+```
+
+Esto indica a Wazuh: *"cuando la regla 86600 haya disparado, evalúa también
+esta regla si se cumple la condición adicional"*.
+
+### Verificación
+
+```bash
+sudo /var/ossec/bin/wazuh-logtest
+# Pegar el JSON de SNMP
+```
+
+Salida esperada:
+
+```
+**Phase 3: Completed filtering (rules).
+    id: '100010'
+    level: '7'
+    description: 'T-Pot/Suricata: SNMP scan desde 141.153.237.4 con community public'
+    mitre.id: ['T1046']
+```
+
+### Lección
+
+En Wazuh, las reglas custom que operan sobre un decoder específico
+(Suricata, JSON, Syslog, etc.) **necesitan `<if_sid>`** con el ID de la
+regla base. Sin él, el evento no llega a la regla custom.
+
+Referencia: [Documentación de Wazuh sobre `if_sid`](https://documentation.wazuh.com/current/user-manual/ruleset/ruleset-xml-syntax/rules.html)
+
 
 ## Plantilla para próximos incidentes
 
