@@ -22,7 +22,8 @@ feliz: demuestran criterio técnico y capacidad de diagnóstico.
 12. [Agente en bucle "Never connected" por auto-enrollment](#incidente-12-agente-en-bucle-never-connected-por-auto-enrollment)
 13. [Error de `cowrie.json` — T-Pot no usa Cowrie en esta versión](#incidente-13-error-de-cowriejson--t-pot-no-usa-cowrie-en-esta-versión)
 14. [Mismatch de versión agente (4.14.9) vs manager (4.14.8)](#incidente-14-mismatch-de-versión-agente-4149-vs-manager-4148)
-
+15. [Manager no arranca por `Field 'protocol' is static`](#incidente-15-manager-no-arranca-por-field-protocol-is-static)
+16. [Reglas custom no disparan sin `<if_sid>`](#incidente-16-reglas-custom-no-disparan-sin-if_sid)
 ---
 ---
 ## Incidente 1: Wazuh agent destruye Wazuh manager al instalarse en el mismo host
